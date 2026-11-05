@@ -12,6 +12,12 @@ import sys
 import time
 from typing import List, Optional
 
+# Ensure UTF-8 output on Windows
+if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
+  sys.stdout.reconfigure(encoding='utf-8')
+if sys.stderr and hasattr(sys.stderr, 'reconfigure'):
+  sys.stderr.reconfigure(encoding='utf-8')
+
 # Ensure project root is in sys.path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:

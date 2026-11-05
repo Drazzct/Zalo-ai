@@ -12,6 +12,13 @@ import os
 from pathlib import Path
 import sys
 import time
+
+# Ensure UTF-8 output on Windows
+if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
+  sys.stdout.reconfigure(encoding='utf-8')
+if sys.stderr and hasattr(sys.stderr, 'reconfigure'):
+  sys.stderr.reconfigure(encoding='utf-8')
+
 from src.agent_pipeline import ReasoningPipeline
 from src.llm_client import MockLLMClient, OllamaClient, OpenAICompatibleClient
 
