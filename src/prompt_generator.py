@@ -81,13 +81,68 @@ def solve(con):
 """
 
   @classmethod
+  def get_few_shot_examples(cls, available_tables: Optional[List[str]] = None) -> str:
+    tbl = 'don_hang_chi_tiet'
+    if available_tables:
+      for candidate in available_tables:
+        c_low = candidate.lower()
+        if any(w in c_low for w in ['ban_hang', 'hoa_don', 'don_hang', 'ban']):
+          tbl = candidate
+          break
+      else:
+        tbl = available_tables[0]
+
+    return f"""### VÍ DỤ MẪU (LƯU Ý: Đổi tên bảng và cột theo đúng danh sách bảng của shop ở trên):
+
+Ví dụ 1: "Tổng doanh thu trong ngày hôm nay là bao nhiêu?" (as_of_date: 2025-04-30)
+```python
+def solve(con):
+    # Đơn doanh thu: không huỷ, không trả
+    query = \"\"\"
+    SELECT COALESCE(SUM(thanh_tien), 0)
+    FROM {tbl}
+    WHERE ngay_dat_hang = '2025-04-30'
+      AND LOWER(trang_thai) NOT LIKE '%hu%'
+      AND LOWER(trang_thai) NOT LIKE '%tr%'
+    \"\"\"
+    res = con.execute(query).fetchone()[0]
+    return {{
+        "type": "number",
+        "answer": int(round(res))
+    }}
+```
+
+Ví dụ 2: "Tỉ lệ huỷ đơn tháng 6/2025 là bao nhiêu %?" (as_of_date: 2026-06-24)
+```python
+def solve(con):
+    query = \"\"\"
+    SELECT 
+        COUNT(DISTINCT ma_don_hang) AS total_orders,
+        COUNT(DISTINCT CASE WHEN LOWER(trang_thai) LIKE '%hu%' THEN ma_don_hang END) AS cancelled_orders
+    FROM {tbl}
+    WHERE ngay_dat_hang >= '2025-06-01' AND ngay_dat_hang <= '2025-06-30'
+    \"\"\"
+    row = con.execute(query).fetchone()
+    total, cancelled = row[0], row[1]
+    if total == 0:
+        return {{"type": "unanswerable", "reason": "Không có đơn hàng nào trong tháng 6/2025"}}
+    rate = round((cancelled / total) * 100, 2)
+    return {{
+        "type": "percent",
+        "answer": rate
+    }}
+```
+"""
+
+  @classmethod
   def generate_prompt(
       cls,
       question: str,
       as_of_date: str,
       schema_context: str,
       rules_summary: str,
-      temporal_anchors: Dict[str, Any]
+      temporal_anchors: Dict[str, Any],
+      available_tables: Optional[List[str]] = None
   ) -> str:
     """Generate master prompt combining schema, rules, temporal anchors, and user question."""
     temp_info = []
@@ -102,6 +157,7 @@ def solve(con):
       temp_info.append(f'- Cụm từ thời gian nhận diện: {phrases}')
 
     temp_context_str = '\n'.join(temp_info) if temp_info else '- Không xác định được cụm từ thời gian đặc biệt.'
+    few_shots = cls.get_few_shot_examples(available_tables)
 
     prompt = f"""{cls.SYSTEM_PROMPT}
 
@@ -109,7 +165,7 @@ def solve(con):
 
 {rules_summary}
 
-{cls.FEW_SHOT_EXAMPLES}
+{few_shots}
 
 ### THÔNG TIN THỜI GIAN ĐÃ XÁC ĐỊNH:
 - Ngày mốc (as_of_date): {as_of_date}

@@ -27,7 +27,10 @@ class AbstainGate:
       return True
 
     if ans_type == 'unanswerable':
-      # Unanswerable has reason, valid to submit
+      reason = str(answer_obj.get('reason') or answer_obj.get('answer') or '').lower()
+      # If reason is due to schema/execution errors, it's not a legitimate business unanswerable
+      if any(err in reason for err in ['not exist', 'không tồn tại', 'syntax', 'error', 'lỗi', 'table', 'bảng', 'column', 'cột', 'catalog']):
+        return True
       return False
 
     val = answer_obj.get('answer')

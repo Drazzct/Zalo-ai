@@ -165,7 +165,9 @@ def main():
   ans_file = split_path / 'answers.jsonl'
   if args.evaluate and ans_file.exists():
     gt = load_jsonl(ans_file)
-    eval_metrics = Evaluator.evaluate(results, gt)
+    processed_ids = {r['id'] for r in results}
+    filtered_gt = [g for g in gt if g['id'] in processed_ids]
+    eval_metrics = Evaluator.evaluate(results, filtered_gt)
     print('\n' + '=' * 60)
     print('BENCHMARK EVALUATION SUMMARY')
     print('=' * 60)
