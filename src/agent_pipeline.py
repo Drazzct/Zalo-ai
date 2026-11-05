@@ -27,9 +27,6 @@ from src.schema_profiler import SchemaProfiler
 
 # Alias for backward compatibility
 LLMClient = BaseLLMClient
-
-
-def extract_python_code(text: str) -> str:
   """Extract Python code block from markdown response."""
   # Look for ```python ... ```
   pattern = r'```(?:python)?\s*(.*?)\s*```'
@@ -145,7 +142,7 @@ class ReasoningPipeline:
       llm_response = self.llm_client.generate(current_prompt)
       code_str = extract_python_code(llm_response)
 
-      exec_res = self.sandbox.execute_code(code_str, ingestor.con, as_of_date=as_of)
+      exec_res = self.sandbox.execute_code(code_str, ingestor.con)
       history_logs.append({
           'attempt': attempt + 1,
           'code': code_str,

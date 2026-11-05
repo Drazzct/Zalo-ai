@@ -24,3 +24,4 @@ python predict.py \
     --log-dir "$LOG_DIR"
 
 echo "Prediction completed successfully!"
+

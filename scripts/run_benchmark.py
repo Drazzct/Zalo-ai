@@ -6,9 +6,17 @@ generates per-question execution logs, and computes official competition metrics
 
 import argparse
 import json
+import os
 from pathlib import Path
+import sys
 import time
 from typing import List, Optional
+
+# Ensure project root is in sys.path
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+  sys.path.insert(0, str(ROOT_DIR))
+
 from src.agent_pipeline import ReasoningPipeline
 from src.evaluator import Evaluator
 from src.llm_client import MockLLMClient, OllamaClient, OpenAICompatibleClient
