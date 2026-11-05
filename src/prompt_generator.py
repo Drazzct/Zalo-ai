@@ -22,6 +22,7 @@ QUY TẮC BẮT BUỘC:
    - Bán chạy nhất: Xếp theo số lượng quy về đơn vị cơ bản (bỏ đơn huỷ, trả).
    - Bằng nhau: Nếu bằng nhau ở tiêu chí câu hỏi, xếp theo mã tăng dần (hoặc tên tăng dần nếu không có mã).
    - Kỳ ngoài khoảng dữ liệu: Nếu kỳ hỏi nằm HOÀN TOÀN ngoài khoảng ngày có dữ liệu của shop, trả về {"type": "unanswerable", "reason": "Dữ liệu không có kỳ này"}.
+   - Tên bảng và cột: BẮT BUỘC chỉ truy vấn tên bảng và cột THỰC TẾ có trong phần "CƠ SỞ DỮ LIỆU CỬA HÀNG" bên dưới. TUYỆT ĐỐI KHÔNG copy tên bảng từ ví dụ minh họa nếu shop không có bảng đó!
 2. ĐỊNH DẠNG ĐÁP ÁN:
    - type = "number": Số thực hoặc số nguyên (tiền là số nguyên VND, làm tròn về đồng). KHÔNG kèm chữ 'đ' hay dấu phẩy.
    - type = "percent": Số phần trăm làm tròn 2 chữ số thập phân (ví dụ: 12.45, -5.20). KHÔNG kèm ký hiệu %.
@@ -37,7 +38,7 @@ QUY TẮC BẮT BUỘC:
 """
 
   FEW_SHOT_EXAMPLES = """
-### VÍ DỤ MẪU:
+### VÍ DỤ MẪU (LƯU Ý: Đổi tên bảng và tên cột theo đúng danh sách bảng của shop ở trên, KHÔNG copy y nguyên don_hang_chi_tiet nếu shop không có):
 
 Ví dụ 1: "Tổng doanh thu trong ngày hôm nay là bao nhiêu?" (as_of_date: 2025-04-30)
 ```python
@@ -104,11 +105,11 @@ def solve(con):
 
     prompt = f"""{cls.SYSTEM_PROMPT}
 
-{cls.FEW_SHOT_EXAMPLES}
-
 {schema_context}
 
 {rules_summary}
+
+{cls.FEW_SHOT_EXAMPLES}
 
 ### THÔNG TIN THỜI GIAN ĐÃ XÁC ĐỊNH:
 - Ngày mốc (as_of_date): {as_of_date}
@@ -129,6 +130,10 @@ Hãy viết hàm `solve(con)` bằng Python để trả lời câu hỏi trên:
       error_message: str
   ) -> str:
     """Generate self-reflection prompt providing the error feedback to the LLM."""
+    hint = ""
+    if "does not exist" in error_message.lower():
+      hint = "\nLƯU Ý ĐẶC BIỆT: Bảng hoặc cột trên không tồn tại trong database của shop! Vui lòng đọc kỹ danh sách bảng và cột thực tế trong phần CƠ SỞ DỮ LIỆU CỬA HÀNG ở trên để dùng đúng bảng có thật.\n"
+
     reflection = f"""{original_prompt}
 
 ### MÃ BẠN ĐÃ VIẾT TRƯỚC ĐÓ:
@@ -138,8 +143,8 @@ Hãy viết hàm `solve(con)` bằng Python để trả lời câu hỏi trên:
 
 ### THÔNG BÁO LỖI KHI THỰC THI (SANDBOX ERROR):
 {error_message}
-
-Hãy phân tích lỗi trên (ví dụ: sai tên cột, chia cho 0, query trả về rỗng, sai kiểu dữ liệu), viết lại hàm `solve(con)` hoàn chỉnh và sửa triệt để lỗi:
+{hint}
+Hãy phân tích lỗi trên (ví dụ: sai tên cột/bảng, chia cho 0, query trả về rỗng, sai kiểu dữ liệu), viết lại hàm `solve(con)` hoàn chỉnh và sửa triệt để lỗi:
 """
     return reflection
 
