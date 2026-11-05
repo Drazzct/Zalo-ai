@@ -27,6 +27,9 @@ from src.schema_profiler import SchemaProfiler
 
 # Alias for backward compatibility
 LLMClient = BaseLLMClient
+
+
+def extract_python_code(text: str) -> str:
   """Extract Python code block from markdown response."""
   # Look for ```python ... ```
   pattern = r'```(?:python)?\s*(.*?)\s*```'
