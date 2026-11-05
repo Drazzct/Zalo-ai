@@ -134,7 +134,12 @@ def parse_vietnamese_date(val: Any, default_year: Optional[int] = None) -> Optio
     d, m = map(int, no_year_match.groups())
     return f'{default_year:04d}-{m:02d}-{d:02d}'
 
-  return s
+  # Check if already ISO format YYYY-MM-DD
+  if re.match(r'^\d{4}-\d{2}-\d{2}', s):
+    return s
+
+  # Not a recognized date format
+  return None
 
 
 class DataIngestor:
@@ -236,6 +241,19 @@ class DataIngestor:
       col_map[sc] = str(c)
 
     df.columns = clean_cols
+
+    # Filter out report summary/total/footnote rows (e.g. "Tổng tháng", "Tổng cộng", "Cộng", "Ghi chú:")
+    def is_footer_or_summary(row):
+      non_empty = [c for c in row if pd.notna(c) and str(c).strip()]
+      if len(non_empty) <= max(2, len(row) // 2):
+        for c in non_empty:
+          c_str = str(c).strip().lower()
+          if re.search(r'^\s*(?:tổng|tong|cộng|cong|ghi\s*chú|ghi\s*chu)\b', c_str):
+            return True
+      return False
+
+    summary_mask = df.apply(is_footer_or_summary, axis=1)
+    df = df[~summary_mask].copy()
 
     # Infer year from sheet name or file name if present
     inferred_year = None

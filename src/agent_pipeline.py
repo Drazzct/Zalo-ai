@@ -14,6 +14,7 @@ import re
 import time
 from typing import Any, Dict, List, Optional, Tuple
 import duckdb
+from src.abstain_gate import AbstainGate
 from src.calendar_resolver import CalendarResolver
 from src.data_ingestor import DataIngestor
 from src.prompt_generator import PromptGenerator
@@ -185,16 +186,20 @@ class ReasoningPipeline:
             original_prompt=prompt, previous_code=code_str, error_message=err_msg
         )
 
-    # 5. Fallback Decision (Abstain if failed to prevent -1 penalty)
+    # 5. Fallback Decision & Strict Formatting via AbstainGate
     elapsed = time.perf_counter() - start_time
     if final_result and 'type' in final_result:
-      final_answer = {'id': qid, **final_result}
+      raw_answer = {'id': qid, **final_result}
     else:
-      final_answer = {
+      raw_answer = {
           'id': qid,
           'type': 'abstain',
           'reason': 'Execution failed after retries',
       }
+
+    final_answer = AbstainGate.filter_answer(
+        raw_answer, question_text=q_text, exec_history=history_logs
+    )
 
     self._write_log(
         log_dir, qid, final_answer, elapsed, history_logs, original_prompt=prompt
