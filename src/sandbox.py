@@ -12,6 +12,43 @@ from typing import Any, Dict, Optional
 import duckdb
 
 
+class DuckDBContextWrapper:
+  """Wrapper around DuckDBPyConnection to support both SQL execution and dictionary indexing for pandas."""
+
+  def __init__(self, con: duckdb.DuckDBPyConnection, as_of_date: str = ''):
+    self._con = con
+    self.as_of_date = as_of_date
+    self._df_cache = {}
+
+  def execute(self, query: str, *args, **kwargs):
+    return self._con.execute(query, *args, **kwargs)
+
+  def fetchall(self):
+    return self._con.fetchall()
+
+  def fetchone(self):
+    return self._con.fetchone()
+
+  def __getitem__(self, key: str):
+    if key == 'as_of_date':
+      return self.as_of_date
+    if key not in self._df_cache:
+      try:
+        self._df_cache[key] = self._con.execute(f'SELECT * FROM "{key}"').df()
+      except Exception:
+        res = self._con.execute(
+            f"SELECT table_name FROM information_schema.tables WHERE LOWER(table_name) = '{key.lower()}'"
+        ).fetchone()
+        if res:
+          self._df_cache[key] = self._con.execute(f'SELECT * FROM "{res[0]}"').df()
+        else:
+          raise KeyError(f"Table '{key}' not found in database.")
+    return self._df_cache[key]
+
+  def __getattr__(self, name: str):
+    return getattr(self._con, name)
+
+
 class ExecutionSandbox:
   """Executes generated Python code that queries DuckDB and returns the answer."""
 
@@ -21,7 +58,8 @@ class ExecutionSandbox:
   def execute_code(
       self,
       code_str: str,
-      con: duckdb.DuckDBPyConnection
+      con: duckdb.DuckDBPyConnection,
+      as_of_date: str = ''
   ) -> Dict[str, Any]:
     """Execute Python code containing `solve(con) -> dict`.
 
@@ -53,8 +91,10 @@ class ExecutionSandbox:
     from datetime import date, datetime, timedelta
     import pandas as pd
 
+    wrapped_con = DuckDBContextWrapper(con, as_of_date=as_of_date) if not isinstance(con, DuckDBContextWrapper) else con
+
     local_scope: Dict[str, Any] = {
-        'con': con,
+        'con': wrapped_con,
         'pd': pd,
         'duckdb': duckdb,
         'math': math,
@@ -68,7 +108,18 @@ class ExecutionSandbox:
       exec(compiled_code, local_scope)
       if 'solve' not in local_scope or not callable(local_scope['solve']):
         raise ValueError("Generated code must define a callable 'solve(con)' function.")
-      return local_scope['solve'](con)
+      raw_res = local_scope['solve'](wrapped_con)
+      # Auto-wrap primitive return values if not returned as a dictionary
+      if not isinstance(raw_res, dict):
+        if isinstance(raw_res, bool):
+          return {'type': 'boolean', 'answer': raw_res}
+        elif isinstance(raw_res, (int, float)):
+          return {'type': 'number', 'answer': raw_res}
+        elif isinstance(raw_res, str):
+          return {'type': 'string', 'answer': raw_res}
+        elif isinstance(raw_res, list):
+          return {'type': 'list', 'answer': raw_res}
+      return raw_res
 
     with ThreadPoolExecutor(max_workers=1) as executor:
       future = executor.submit(_run)

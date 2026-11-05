@@ -12,7 +12,8 @@ import os
 from pathlib import Path
 import sys
 import time
-from src.agent_pipeline import MockLLMClient, ReasoningPipeline
+from src.agent_pipeline import ReasoningPipeline
+from src.llm_client import MockLLMClient, OllamaClient, OpenAICompatibleClient
 
 
 def load_jsonl(path: Path):
@@ -57,8 +58,20 @@ def main():
       '--model-backend',
       type=str,
       choices=['mock', 'ollama', 'vllm'],
-      default='mock',
-      help='LLM backend to use for code generation',
+      default='ollama',
+      help='LLM backend to use for code generation (default: ollama)',
+  )
+  parser.add_argument(
+      '--model-name',
+      type=str,
+      default='qwen2.5-coder:7b',
+      help='Model name (e.g. qwen2.5-coder:7b, qwen2.5-coder:3b)',
+  )
+  parser.add_argument(
+      '--api-url',
+      type=str,
+      default='http://127.0.0.1:11434',
+      help='URL of Ollama or vLLM server',
   )
 
   args = parser.parse_args()
@@ -81,8 +94,11 @@ def main():
   # Model selection
   if args.model_backend == 'mock':
     llm_client = MockLLMClient()
+  elif args.model_backend == 'ollama':
+    llm_client = OllamaClient(model_name=args.model_name, host=args.api_url)
+  elif args.model_backend == 'vllm':
+    llm_client = OpenAICompatibleClient(model_name=args.model_name, base_url=args.api_url)
   else:
-    # Future extensibility for Ollama/vLLM
     llm_client = MockLLMClient()
 
   pipeline = ReasoningPipeline(
@@ -127,3 +143,4 @@ def main():
 
 if __name__ == '__main__':
   main()
+

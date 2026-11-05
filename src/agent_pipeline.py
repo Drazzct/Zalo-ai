@@ -17,11 +17,16 @@ import duckdb
 from src.abstain_gate import AbstainGate
 from src.calendar_resolver import CalendarResolver
 from src.data_ingestor import DataIngestor
+from src.llm_client import BaseLLMClient, MockLLMClient, OllamaClient, OpenAICompatibleClient
 from src.prompt_generator import PromptGenerator
 from src.query_normalizer import QueryNormalizer
 from src.rulebook_parser import RulebookParser
 from src.sandbox import ExecutionSandbox
 from src.schema_profiler import SchemaProfiler
+
+
+# Alias for backward compatibility
+LLMClient = BaseLLMClient
 
 
 def extract_python_code(text: str) -> str:
@@ -41,31 +46,6 @@ def extract_python_code(text: str) -> str:
     return text.strip()
 
   return text.strip()
-
-
-class LLMClient(ABC):
-  """Abstract LLM Client interface."""
-
-  @abstractmethod
-  def generate(self, prompt: str) -> str:
-    pass
-
-
-class MockLLMClient(LLMClient):
-  """Mock LLM Client for testing and deterministic baseline generation."""
-
-  def __init__(self, canned_responses: Optional[Dict[str, str]] = None):
-    self.canned_responses = canned_responses or {}
-
-  def generate(self, prompt: str) -> str:
-    for key, resp in self.canned_responses.items():
-      if key.lower() in prompt.lower():
-        return resp
-    # Default fallback mock code
-    return """```python
-def solve(con):
-    return {"type": "abstain"}
-```"""
 
 
 class ReasoningPipeline:
@@ -165,7 +145,7 @@ class ReasoningPipeline:
       llm_response = self.llm_client.generate(current_prompt)
       code_str = extract_python_code(llm_response)
 
-      exec_res = self.sandbox.execute_code(code_str, ingestor.con)
+      exec_res = self.sandbox.execute_code(code_str, ingestor.con, as_of_date=as_of)
       history_logs.append({
           'attempt': attempt + 1,
           'code': code_str,
