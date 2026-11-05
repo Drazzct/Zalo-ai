@@ -14,3 +14,5 @@ env/
 venv/
 result/
 submission*.jsonl
+*.zip
+notebooks/.ipynb_checkpoints/
