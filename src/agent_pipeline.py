@@ -135,6 +135,7 @@ class ReasoningPipeline:
         rules_summary=rules_ctx,
         temporal_anchors=temporal_anchors,
         available_tables=list(profiler.table_profiles.keys()),
+        table_profiles=profiler.table_profiles,
     )
 
     history_logs = []
