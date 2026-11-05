@@ -45,6 +45,30 @@ class DuckDBContextWrapper:
           raise KeyError(f"Table '{key}' not found in database.")
     return self._df_cache[key]
 
+  def get(self, key: str, default=None):
+    try:
+      return self[key]
+    except (KeyError, Exception):
+      return default
+
+  def keys(self):
+    tables = [
+        r[0]
+        for r in self._con.execute(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main'"
+        ).fetchall()
+    ]
+    return ['as_of_date'] + tables
+
+  def __contains__(self, key: str) -> bool:
+    if key == 'as_of_date':
+      return True
+    try:
+      self[key]
+      return True
+    except Exception:
+      return False
+
   def __getattr__(self, name: str):
     return getattr(self._con, name)
 

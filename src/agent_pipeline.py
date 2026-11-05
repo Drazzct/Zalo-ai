@@ -145,7 +145,7 @@ class ReasoningPipeline:
       llm_response = self.llm_client.generate(current_prompt)
       code_str = extract_python_code(llm_response)
 
-      exec_res = self.sandbox.execute_code(code_str, ingestor.con)
+      exec_res = self.sandbox.execute_code(code_str, ingestor.con, as_of_date=as_of)
       history_logs.append({
           'attempt': attempt + 1,
           'code': code_str,

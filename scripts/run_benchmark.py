@@ -147,10 +147,11 @@ def main():
       # Ensure clean json line
       line = json.dumps(ans_obj, ensure_ascii=False)
       out_f.write(line + '\n')
+      out_f.flush()
       results.append(ans_obj)
 
-      if (i + 1) % 10 == 0 or (i + 1) == len(questions):
-        print(f'Progress: {i + 1}/{len(questions)} questions processed.')
+      ans_preview = f"type={ans_obj.get('type')}, answer={ans_obj.get('answer', ans_obj.get('reason'))}"
+      print(f"[{i + 1}/{len(questions)}] {q['id']} ({biz_id}) -> {ans_preview}", flush=True)
 
   elapsed_total = time.perf_counter() - start_all
   print(
