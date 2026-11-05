@@ -155,3 +155,4 @@ class CalendarResolver:
     else:
       end_date = date(year, end_month + 1, 1) - timedelta(days=1)
     return start_date, end_date
+

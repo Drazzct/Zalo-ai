@@ -170,3 +170,4 @@ class TestEvaluator:
     assert res['wrong'] == 1
     assert res['abstain'] == 1
     assert res['total_score'] == 1  # 2 - 1 = 1
+
