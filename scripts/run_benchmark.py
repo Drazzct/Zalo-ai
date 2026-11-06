@@ -95,6 +95,12 @@ def main():
       default='http://127.0.0.1:11434',
       help='URL of Ollama or vLLM server',
   )
+  parser.add_argument(
+      '--workers',
+      type=int,
+      default=1,
+      help='Number of concurrent workers for processing questions (default: 1)',
+  )
 
   args = parser.parse_args()
   split_path = Path(args.split_dir)
@@ -144,20 +150,46 @@ def main():
   results = []
   start_all = time.perf_counter()
 
-  with open(out_path, 'w', encoding='utf-8') as out_f:
-    for i, q in enumerate(questions):
-      biz_id = q['business_id']
-      biz_dir = data_dir / biz_id
+  if args.workers <= 1:
+    with open(out_path, 'w', encoding='utf-8') as out_f:
+      for i, q in enumerate(questions):
+        biz_id = q['business_id']
+        biz_dir = data_dir / biz_id
 
-      ans_obj = pipeline.solve_question(q, biz_dir, log_dir=log_path)
-      # Ensure clean json line
-      line = json.dumps(ans_obj, ensure_ascii=False)
-      out_f.write(line + '\n')
-      out_f.flush()
-      results.append(ans_obj)
+        ans_obj = pipeline.solve_question(q, biz_dir, log_dir=log_path)
+        # Ensure clean json line
+        line = json.dumps(ans_obj, ensure_ascii=False)
+        out_f.write(line + '\n')
+        out_f.flush()
+        results.append(ans_obj)
 
-      ans_preview = f"type={ans_obj.get('type')}, answer={ans_obj.get('answer', ans_obj.get('reason'))}"
-      print(f"[{i + 1}/{len(questions)}] {q['id']} ({biz_id}) -> {ans_preview}", flush=True)
+        ans_preview = f"type={ans_obj.get('type')}, answer={ans_obj.get('answer', ans_obj.get('reason'))}"
+        print(f"[{i + 1}/{len(questions)}] {q['id']} ({biz_id}) -> {ans_preview}", flush=True)
+  else:
+    import concurrent.futures
+    print(f"Running concurrent evaluation with {args.workers} workers...")
+
+    def _worker(item):
+      idx, q = item
+      b_id = q['business_id']
+      b_dir = data_dir / b_id
+      ans = pipeline.solve_question(q, b_dir, log_dir=log_path)
+      ans_prev = f"type={ans.get('type')}, answer={ans.get('answer', ans.get('reason'))}"
+      print(f"[{idx + 1}/{len(questions)}] {q['id']} ({b_id}) -> {ans_prev}", flush=True)
+      return idx, ans
+
+    indexed = list(enumerate(questions))
+    ans_map = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
+      futures = {executor.submit(_worker, it): it[0] for it in indexed}
+      for fut in concurrent.futures.as_completed(futures):
+        idx, ans = fut.result()
+        ans_map[idx] = ans
+
+    results = [ans_map[i] for i in range(len(questions))]
+    with open(out_path, 'w', encoding='utf-8') as out_f:
+      for ans in results:
+        out_f.write(json.dumps(ans, ensure_ascii=False) + '\n')
 
   elapsed_total = time.perf_counter() - start_all
   print(

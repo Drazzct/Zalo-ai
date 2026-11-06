@@ -62,8 +62,9 @@ class OllamaClient(BaseLLMClient):
         'stream': False,
         'options': {
             'temperature': self.temperature,
-            'num_predict': 1024,
+            'num_predict': 512,
             'num_ctx': self.num_ctx,
+            'stop': ['```\n\n', '```\r\n\r\n'],
         },
     }
     data_bytes = json.dumps(payload).encode('utf-8')
@@ -109,7 +110,8 @@ class OpenAICompatibleClient(BaseLLMClient):
         'model': self.model_name,
         'messages': [{'role': 'user', 'content': prompt}],
         'temperature': self.temperature,
-        'max_tokens': 1024,
+        'max_tokens': 512,
+        'stop': ['```\n\n', '```\r\n\r\n'],
     }
     data_bytes = json.dumps(payload).encode('utf-8')
     req = urllib.request.Request(

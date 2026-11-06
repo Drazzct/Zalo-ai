@@ -11,6 +11,7 @@ from datetime import datetime
 import json
 from pathlib import Path
 import re
+import threading
 import time
 from typing import Any, Dict, List, Optional, Tuple
 import duckdb
@@ -70,15 +71,17 @@ class ReasoningPipeline:
 
     # Cache for ingested businesses: {biz_id: (ingestor, profiler)}
     self.biz_cache: Dict[str, Tuple[DataIngestor, SchemaProfiler]] = {}
+    self._cache_lock = threading.Lock()
 
   def get_or_ingest_biz(self, biz_dir: Path) -> Tuple[DataIngestor, SchemaProfiler]:
     biz_id = biz_dir.name
-    if biz_id not in self.biz_cache:
-      ingestor = DataIngestor(':memory:')
-      ingestor.ingest_business(biz_dir, calendar_path=self.calendar_path)
-      profiler = SchemaProfiler(ingestor, biz_dir)
-      self.biz_cache[biz_id] = (ingestor, profiler)
-    return self.biz_cache[biz_id]
+    with self._cache_lock:
+      if biz_id not in self.biz_cache:
+        ingestor = DataIngestor(':memory:')
+        ingestor.ingest_business(biz_dir, calendar_path=self.calendar_path)
+        profiler = SchemaProfiler(ingestor, biz_dir)
+        self.biz_cache[biz_id] = (ingestor, profiler)
+      return self.biz_cache[biz_id]
 
   def solve_question(
       self,
@@ -147,7 +150,7 @@ class ReasoningPipeline:
       llm_response = self.llm_client.generate(current_prompt)
       code_str = extract_python_code(llm_response)
 
-      exec_res = self.sandbox.execute_code(code_str, ingestor.con, as_of_date=as_of)
+      exec_res = self.sandbox.execute_code(code_str, ingestor.con.cursor(), as_of_date=as_of)
       history_logs.append({
           'attempt': attempt + 1,
           'code': code_str,
