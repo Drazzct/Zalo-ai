@@ -1,0 +1,1612 @@
+{
+  "rows": 56501,
+  "cols": 10,
+  "column_profiles": {
+    "Giá bán": {
+      "null": 0,
+      "unique": 118,
+      "examples": [
+        {
+          "value": "10,000",
+          "count": 5369
+        },
+        {
+          "value": "8,000",
+          "count": 2992
+        },
+        {
+          "value": "30,000",
+          "count": 2896
+        },
+        {
+          "value": "4,000",
+          "count": 2782
+        },
+        {
+          "value": "12,000",
+          "count": 2615
+        },
+        {
+          "value": "22,000",
+          "count": 2451
+        },
+        {
+          "value": "4,500",
+          "count": 2444
+        },
+        {
+          "value": "18,000",
+          "count": 2088
+        }
+      ],
+      "sqlite_column": "sale_price_vnd",
+      "type": "INTEGER"
+    },
+    "Kết quả": {
+      "null": 0,
+      "unique": 4,
+      "examples": [
+        {
+          "value": "Xong",
+          "count": 53893
+        },
+        {
+          "value": "Đã hủy",
+          "count": 1714
+        },
+        {
+          "value": "Đổi trả",
+          "count": 863
+        },
+        {
+          "value": "Đang giao",
+          "count": 31
+        }
+      ],
+      "sqlite_column": "order_status",
+      "type": "TEXT"
+    },
+    "Nội dung": {
+      "null": 0,
+      "unique": 70,
+      "examples": [
+        {
+          "value": "Mì Hảo Hảo tôm chua cay",
+          "count": 2557
+        },
+        {
+          "value": "Trứng gà so",
+          "count": 1983
+        },
+        {
+          "value": "Nước suối Aquafina 500ml",
+          "count": 1918
+        },
+        {
+          "value": "Sữa tươi Vinamilk 180ml",
+          "count": 1760
+        },
+        {
+          "value": "Sting dâu 330ml",
+          "count": 1697
+        },
+        {
+          "value": "Snack Oishi tôm cay 40g",
+          "count": 1631
+        },
+        {
+          "value": "Coca Cola 330ml",
+          "count": 1531
+        },
+        {
+          "value": "Nước mắm Nam Ngư 750ml",
+          "count": 1348
+        }
+      ],
+      "sqlite_column": "product_name",
+      "type": "TEXT"
+    },
+    "Ngày tháng": {
+      "null": 0,
+      "unique": 450,
+      "examples": [
+        {
+          "value": "25 thg 2 2026",
+          "count": 327
+        },
+        {
+          "value": "14 thg 2 2026",
+          "count": 317
+        },
+        {
+          "value": "21 thg 2 2026",
+          "count": 286
+        },
+        {
+          "value": "12 thg 2 2026",
+          "count": 283
+        },
+        {
+          "value": "11 thg 2 2026",
+          "count": 276
+        },
+        {
+          "value": "26 thg 2 2026",
+          "count": 273
+        },
+        {
+          "value": "13 thg 2 2026",
+          "count": 272
+        },
+        {
+          "value": "24 thg 2 2026",
+          "count": 270
+        }
+      ],
+      "sqlite_column": "order_date",
+      "type": "TEXT ISO date parsed"
+    },
+    "Đơn vị (tính)": {
+      "null": 0,
+      "unique": 16,
+      "examples": [
+        {
+          "value": "gói",
+          "count": 18869
+        },
+        {
+          "value": "chai",
+          "count": 12561
+        },
+        {
+          "value": "lon",
+          "count": 6921
+        },
+        {
+          "value": "hộp",
+          "count": 6788
+        },
+        {
+          "value": "kg",
+          "count": 2762
+        },
+        {
+          "value": "lốc",
+          "count": 1990
+        },
+        {
+          "value": "quả",
+          "count": 1866
+        },
+        {
+          "value": "thùng",
+          "count": 1784
+        }
+      ],
+      "sqlite_column": "unit",
+      "type": "TEXT"
+    },
+    "so_luong": {
+      "null": 0,
+      "unique": 10,
+      "examples": [
+        {
+          "value": "1",
+          "count": 34321
+        },
+        {
+          "value": "2",
+          "count": 12319
+        },
+        {
+          "value": "3",
+          "count": 4495
+        },
+        {
+          "value": "4",
+          "count": 2168
+        },
+        {
+          "value": "10",
+          "count": 1602
+        },
+        {
+          "value": "5",
+          "count": 1577
+        },
+        {
+          "value": "9",
+          "count": 7
+        },
+        {
+          "value": "8",
+          "count": 5
+        }
+      ],
+      "sqlite_column": "quantity",
+      "type": "INTEGER"
+    },
+    "Thanh tien": {
+      "null": 0,
+      "unique": 392,
+      "examples": [
+        {
+          "value": "10,000",
+          "count": 3602
+        },
+        {
+          "value": "30,000",
+          "count": 2579
+        },
+        {
+          "value": "20,000",
+          "count": 2482
+        },
+        {
+          "value": "8,000",
+          "count": 2361
+        },
+        {
+          "value": "12,000",
+          "count": 2098
+        },
+        {
+          "value": "40,000",
+          "count": 1750
+        },
+        {
+          "value": "4,000",
+          "count": 1674
+        },
+        {
+          "value": "18,000",
+          "count": 1565
+        }
+      ],
+      "sqlite_column": "line_amount_vnd",
+      "type": "INTEGER"
+    },
+    "Quy ra ĐV lẻ": {
+      "null": 0,
+      "unique": 33,
+      "examples": [
+        {
+          "value": "1",
+          "count": 32059
+        },
+        {
+          "value": "2",
+          "count": 11835
+        },
+        {
+          "value": "3",
+          "count": 4388
+        },
+        {
+          "value": "4",
+          "count": 2293
+        },
+        {
+          "value": "10",
+          "count": 1801
+        },
+        {
+          "value": "5",
+          "count": 1634
+        },
+        {
+          "value": "12",
+          "count": 509
+        },
+        {
+          "value": "6",
+          "count": 410
+        }
+      ],
+      "sqlite_column": "base_quantity",
+      "type": "INTEGER"
+    },
+    "Mã hóa đơn": {
+      "null": 0,
+      "unique": 22428,
+      "examples": [
+        {
+          "value": "ORD000002",
+          "count": 8
+        },
+        {
+          "value": "ORD000022",
+          "count": 8
+        },
+        {
+          "value": "ORD000026",
+          "count": 8
+        },
+        {
+          "value": "ORD000061",
+          "count": 8
+        },
+        {
+          "value": "ORD000128",
+          "count": 8
+        },
+        {
+          "value": "ORD000154",
+          "count": 8
+        },
+        {
+          "value": "ORD000180",
+          "count": 8
+        },
+        {
+          "value": "ORD000205",
+          "count": 8
+        }
+      ],
+      "sqlite_column": "order_id",
+      "type": "TEXT"
+    },
+    "Đối tác": {
+      "null": 0,
+      "unique": 261,
+      "examples": [
+        {
+          "value": "Khách lẻ",
+          "count": 22673
+        },
+        {
+          "value": "Lương Hoàng Sơn",
+          "count": 200
+        },
+        {
+          "value": "Tạ Bích Phương",
+          "count": 193
+        },
+        {
+          "value": "Hà Thắng Châu",
+          "count": 188
+        },
+        {
+          "value": "Trần Hồng Bình",
+          "count": 179
+        },
+        {
+          "value": "Tống Phúc Hồng",
+          "count": 177
+        },
+        {
+          "value": "La Tâm Tâm",
+          "count": 173
+        },
+        {
+          "value": "Võ Ngân Hồng",
+          "count": 169
+        }
+      ],
+      "sqlite_column": "customer_name",
+      "type": "TEXT"
+    }
+  },
+  "date_min": "2025-06-01",
+  "date_max": "2026-08-24",
+  "unique_dates": 450,
+  "distinct_orders": 22428,
+  "distinct_products": 70,
+  "distinct_customers_including_walk_in": 261,
+  "statuses_by_line": {
+    "Xong": 53893,
+    "Đã hủy": 1714,
+    "Đổi trả": 863,
+    "Đang giao": 31
+  },
+  "statuses_by_order_consistent_only": {
+    "Xong": 21386,
+    "Đã hủy": 699,
+    "Đổi trả": 333,
+    "Đang giao": 10
+  },
+  "orders_with_inconsistent_attributes_count": 0,
+  "orders_with_inconsistent_attributes_sample": {},
+  "exact_duplicate_extra_lines": 0,
+  "duplicate_rule": "Identical all columns AND same order -> count once, per rulebook §8",
+  "money_greater_than_qty_times_unit_price_count": 0,
+  "money_greater_than_qty_times_unit_price_sample": [],
+  "invalid_or_negative_qty_price_amount_count": 0,
+  "invalid_or_negative_qty_price_amount_sample": [],
+  "parse_errors": [],
+  "unexpected_status": [],
+  "products": [
+    "Bia Heineken 330ml",
+    "Bia Sài Gòn Special 330ml",
+    "Bia Tiger 330ml",
+    "Bàn chải Colgate",
+    "Bánh Chocopie 12 cái",
+    "Bánh Oreo 133g",
+    "Bánh quy Cosy 200g",
+    "Băng vệ sinh Diana 8 miếng",
+    "Bột giặt OMO 3kg",
+    "Bột ngọt Ajinomoto 400g",
+    "Coca  Cola 330ml",
+    "Coca Cola 330ml",
+    "Cá hộp 3 Cô Gái 155g",
+    "Dau phong rang muoi 200g",
+    "Duong Bien Hoa 1kg",
+    "Dầu gội Clear 630g",
+    "Dầu ăn Simply 2L",
+    "Dầu ăn Tường An 1L",
+    "Gao ST25",
+    "Giấy vệ sinh Pulppy 10 cuộn",
+    "Gạo ST25",
+    "Gạo thơm Jasmine",
+    "Hạt hướng dương 200g",
+    "Hạt nêm Knorr 400g",
+    "Kem  đánh răng P/S 180g",
+    "Kem đánh răng P/S 180g",
+    "Khăn giấy Tempo 10 gói",
+    "Kẹo Alpenliebe 100g",
+    "Kẹo cao su Doublemint",
+    "MUỐI I-ỐT 500G",
+    "Muối I-ốt 500g",
+    "MÌ OMACHI SƯỜN HẦM",
+    "Mì  Omachi sườn hầm",
+    "Mì 3 Miền tôm hùm",
+    "Mì Hảo Hảo tôm chua cay",
+    "Mì Omachi sườn hầm",
+    "Nhang Quảng Trí bó",
+    "Nước  giặt Ariel 3.2L",
+    "Nước giặt Ariel 3.2L",
+    "Nước lau sàn Sunlight 1L",
+    "Nước mắm Nam Ngư 750ml",
+    "Nước rửa chén Sunlight 750g",
+    "Nước suối Aquafina 500ml",
+    "Nước suối Lavie 1.5L",
+    "Nước tương Maggi 700ml",
+    "Nếp cái hoa vàng",
+    "Pepsi 330ml",
+    "Phở Vifon bò",
+    "Pin Panasonic AA",
+    "Red Bull 250ml",
+    "Snack Lay's vị tự nhiên 56g",
+    "Snack Oishi tôm cay 40g",
+    "Sting dâu 330ml",
+    "Sữa TH true MILK 180ml",
+    "Sữa chua Vinamilk có đường",
+    "Sữa tươi Vinamilk 180ml",
+    "Sữa tắm Lifebuoy 850g",
+    "Sữa đặc Ông Thọ 380g",
+    "Thuốc lá Jet",
+    "Thuốc lá Vinataba",
+    "Trà xanh 0 độ 455ml",
+    "Trứng gà so",
+    "Tã Bobby M 32 miếng",
+    "Tương ớt Chinsu 250g",
+    "Xà bông Lifebuoy 90g",
+    "Xúc xích Vissan 5 cây",
+    "Yakult 65ml",
+    "ĐƯỜNG BIÊN HÒA 1KG",
+    "Đường Biên Hòa 1kg",
+    "Đậu phộng rang muối 200g"
+  ],
+  "observed_unit_factors": [
+    {
+      "product_name": "Bia Heineken 330ml",
+      "unit": "lon",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Bia Heineken 330ml",
+      "unit": "lốc",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Bia Heineken 330ml",
+      "unit": "thùng",
+      "observed_factors": [
+        24.0
+      ]
+    },
+    {
+      "product_name": "Bia Sài Gòn Special 330ml",
+      "unit": "lon",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Bia Sài Gòn Special 330ml",
+      "unit": "lốc",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Bia Sài Gòn Special 330ml",
+      "unit": "thùng",
+      "observed_factors": [
+        24.0
+      ]
+    },
+    {
+      "product_name": "Bia Tiger 330ml",
+      "unit": "lon",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Bia Tiger 330ml",
+      "unit": "lốc",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Bia Tiger 330ml",
+      "unit": "thùng",
+      "observed_factors": [
+        24.0
+      ]
+    },
+    {
+      "product_name": "Bàn chải Colgate",
+      "unit": "cái",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Bàn chải Colgate",
+      "unit": "lốc",
+      "observed_factors": [
+        12.0
+      ]
+    },
+    {
+      "product_name": "Bánh Chocopie 12 cái",
+      "unit": "hộp",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Bánh Chocopie 12 cái",
+      "unit": "thùng",
+      "observed_factors": [
+        8.0
+      ]
+    },
+    {
+      "product_name": "Bánh Oreo 133g",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Bánh Oreo 133g",
+      "unit": "lốc",
+      "observed_factors": [
+        12.0
+      ]
+    },
+    {
+      "product_name": "Bánh quy Cosy 200g",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Bánh quy Cosy 200g",
+      "unit": "thùng",
+      "observed_factors": [
+        20.0
+      ]
+    },
+    {
+      "product_name": "Băng vệ sinh Diana 8 miếng",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Băng vệ sinh Diana 8 miếng",
+      "unit": "thùng",
+      "observed_factors": [
+        48.0
+      ]
+    },
+    {
+      "product_name": "Bột giặt OMO 3kg",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Bột giặt OMO 3kg",
+      "unit": "thùng",
+      "observed_factors": [
+        4.0
+      ]
+    },
+    {
+      "product_name": "Bột ngọt Ajinomoto 400g",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Bột ngọt Ajinomoto 400g",
+      "unit": "thùng",
+      "observed_factors": [
+        20.0
+      ]
+    },
+    {
+      "product_name": "Coca  Cola 330ml",
+      "unit": "lon",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Coca  Cola 330ml",
+      "unit": "lốc",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Coca  Cola 330ml",
+      "unit": "thùng",
+      "observed_factors": [
+        24.0
+      ]
+    },
+    {
+      "product_name": "Coca Cola 330ml",
+      "unit": "lon",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Coca Cola 330ml",
+      "unit": "lốc",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Coca Cola 330ml",
+      "unit": "thùng",
+      "observed_factors": [
+        24.0
+      ]
+    },
+    {
+      "product_name": "Cá hộp 3 Cô Gái 155g",
+      "unit": "hộp",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Cá hộp 3 Cô Gái 155g",
+      "unit": "lốc",
+      "observed_factors": [
+        10.0
+      ]
+    },
+    {
+      "product_name": "Dau phong rang muoi 200g",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Dau phong rang muoi 200g",
+      "unit": "thùng",
+      "observed_factors": [
+        20.0
+      ]
+    },
+    {
+      "product_name": "Duong Bien Hoa 1kg",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Duong Bien Hoa 1kg",
+      "unit": "thùng",
+      "observed_factors": [
+        12.0
+      ]
+    },
+    {
+      "product_name": "Dầu gội Clear 630g",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Dầu gội Clear 630g",
+      "unit": "thùng",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Dầu ăn Simply 2L",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Dầu ăn Simply 2L",
+      "unit": "thùng",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Dầu ăn Tường An 1L",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Dầu ăn Tường An 1L",
+      "unit": "thùng",
+      "observed_factors": [
+        12.0
+      ]
+    },
+    {
+      "product_name": "Gao ST25",
+      "unit": "bao",
+      "observed_factors": [
+        5.0
+      ]
+    },
+    {
+      "product_name": "Gao ST25",
+      "unit": "bao 25kg",
+      "observed_factors": [
+        25.0
+      ]
+    },
+    {
+      "product_name": "Gao ST25",
+      "unit": "kg",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Giấy vệ sinh Pulppy 10 cuộn",
+      "unit": "lốc",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Giấy vệ sinh Pulppy 10 cuộn",
+      "unit": "thùng",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Gạo ST25",
+      "unit": "bao",
+      "observed_factors": [
+        5.0
+      ]
+    },
+    {
+      "product_name": "Gạo ST25",
+      "unit": "bao 25kg",
+      "observed_factors": [
+        25.0
+      ]
+    },
+    {
+      "product_name": "Gạo ST25",
+      "unit": "kg",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Gạo thơm Jasmine",
+      "unit": "bao",
+      "observed_factors": [
+        5.0
+      ]
+    },
+    {
+      "product_name": "Gạo thơm Jasmine",
+      "unit": "bao 25kg",
+      "observed_factors": [
+        25.0
+      ]
+    },
+    {
+      "product_name": "Gạo thơm Jasmine",
+      "unit": "kg",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Hạt hướng dương 200g",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Hạt hướng dương 200g",
+      "unit": "thùng",
+      "observed_factors": [
+        20.0
+      ]
+    },
+    {
+      "product_name": "Hạt nêm Knorr 400g",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Hạt nêm Knorr 400g",
+      "unit": "thùng",
+      "observed_factors": [
+        20.0
+      ]
+    },
+    {
+      "product_name": "Kem  đánh răng P/S 180g",
+      "unit": "hộp",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Kem  đánh răng P/S 180g",
+      "unit": "thùng",
+      "observed_factors": [
+        36.0
+      ]
+    },
+    {
+      "product_name": "Kem đánh răng P/S 180g",
+      "unit": "hộp",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Kem đánh răng P/S 180g",
+      "unit": "thùng",
+      "observed_factors": [
+        36.0
+      ]
+    },
+    {
+      "product_name": "Khăn giấy Tempo 10 gói",
+      "unit": "lốc",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Khăn giấy Tempo 10 gói",
+      "unit": "thùng",
+      "observed_factors": [
+        12.0
+      ]
+    },
+    {
+      "product_name": "Kẹo Alpenliebe 100g",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Kẹo Alpenliebe 100g",
+      "unit": "thùng",
+      "observed_factors": [
+        40.0
+      ]
+    },
+    {
+      "product_name": "Kẹo cao su Doublemint",
+      "unit": "lốc",
+      "observed_factors": [
+        20.0
+      ]
+    },
+    {
+      "product_name": "Kẹo cao su Doublemint",
+      "unit": "vỉ",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "MUỐI I-ỐT 500G",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "MUỐI I-ỐT 500G",
+      "unit": "thùng",
+      "observed_factors": [
+        20.0
+      ]
+    },
+    {
+      "product_name": "Muối I-ốt 500g",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Muối I-ốt 500g",
+      "unit": "thùng",
+      "observed_factors": [
+        20.0
+      ]
+    },
+    {
+      "product_name": "MÌ OMACHI SƯỜN HẦM",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "MÌ OMACHI SƯỜN HẦM",
+      "unit": "thùng",
+      "observed_factors": [
+        30.0
+      ]
+    },
+    {
+      "product_name": "Mì  Omachi sườn hầm",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Mì  Omachi sườn hầm",
+      "unit": "thùng",
+      "observed_factors": [
+        30.0
+      ]
+    },
+    {
+      "product_name": "Mì 3 Miền tôm hùm",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Mì 3 Miền tôm hùm",
+      "unit": "thùng",
+      "observed_factors": [
+        30.0
+      ]
+    },
+    {
+      "product_name": "Mì Hảo Hảo tôm chua cay",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Mì Hảo Hảo tôm chua cay",
+      "unit": "thùng",
+      "observed_factors": [
+        30.0
+      ]
+    },
+    {
+      "product_name": "Mì Omachi sườn hầm",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Mì Omachi sườn hầm",
+      "unit": "thùng",
+      "observed_factors": [
+        30.0
+      ]
+    },
+    {
+      "product_name": "Nhang Quảng Trí bó",
+      "unit": "bó",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Nhang Quảng Trí bó",
+      "unit": "thùng",
+      "observed_factors": [
+        20.0
+      ]
+    },
+    {
+      "product_name": "Nước  giặt Ariel 3.2L",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Nước  giặt Ariel 3.2L",
+      "unit": "thùng",
+      "observed_factors": [
+        4.0
+      ]
+    },
+    {
+      "product_name": "Nước giặt Ariel 3.2L",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Nước giặt Ariel 3.2L",
+      "unit": "thùng",
+      "observed_factors": [
+        4.0
+      ]
+    },
+    {
+      "product_name": "Nước lau sàn Sunlight 1L",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Nước lau sàn Sunlight 1L",
+      "unit": "thùng",
+      "observed_factors": [
+        12.0
+      ]
+    },
+    {
+      "product_name": "Nước mắm Nam Ngư 750ml",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Nước mắm Nam Ngư 750ml",
+      "unit": "thùng",
+      "observed_factors": [
+        12.0
+      ]
+    },
+    {
+      "product_name": "Nước rửa chén Sunlight 750g",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Nước rửa chén Sunlight 750g",
+      "unit": "thùng",
+      "observed_factors": [
+        12.0
+      ]
+    },
+    {
+      "product_name": "Nước suối Aquafina 500ml",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Nước suối Aquafina 500ml",
+      "unit": "lốc",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Nước suối Aquafina 500ml",
+      "unit": "thùng",
+      "observed_factors": [
+        24.0
+      ]
+    },
+    {
+      "product_name": "Nước suối Lavie 1.5L",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Nước suối Lavie 1.5L",
+      "unit": "lốc",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Nước suối Lavie 1.5L",
+      "unit": "thùng",
+      "observed_factors": [
+        12.0
+      ]
+    },
+    {
+      "product_name": "Nước tương Maggi 700ml",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Nước tương Maggi 700ml",
+      "unit": "thùng",
+      "observed_factors": [
+        12.0
+      ]
+    },
+    {
+      "product_name": "Nếp cái hoa vàng",
+      "unit": "kg",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Pepsi 330ml",
+      "unit": "lon",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Pepsi 330ml",
+      "unit": "lốc",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Pepsi 330ml",
+      "unit": "thùng",
+      "observed_factors": [
+        24.0
+      ]
+    },
+    {
+      "product_name": "Phở Vifon bò",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Phở Vifon bò",
+      "unit": "thùng",
+      "observed_factors": [
+        30.0
+      ]
+    },
+    {
+      "product_name": "Pin Panasonic AA",
+      "unit": "hộp",
+      "observed_factors": [
+        12.0
+      ]
+    },
+    {
+      "product_name": "Pin Panasonic AA",
+      "unit": "vỉ",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Red Bull 250ml",
+      "unit": "lon",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Red Bull 250ml",
+      "unit": "lốc",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Red Bull 250ml",
+      "unit": "thùng",
+      "observed_factors": [
+        24.0
+      ]
+    },
+    {
+      "product_name": "Snack Lay's vị tự nhiên 56g",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Snack Lay's vị tự nhiên 56g",
+      "unit": "thùng",
+      "observed_factors": [
+        32.0
+      ]
+    },
+    {
+      "product_name": "Snack Oishi tôm cay 40g",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Snack Oishi tôm cay 40g",
+      "unit": "thùng",
+      "observed_factors": [
+        50.0
+      ]
+    },
+    {
+      "product_name": "Sting dâu 330ml",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Sting dâu 330ml",
+      "unit": "lốc",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Sting dâu 330ml",
+      "unit": "thùng",
+      "observed_factors": [
+        24.0
+      ]
+    },
+    {
+      "product_name": "Sữa TH true MILK 180ml",
+      "unit": "hộp",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Sữa TH true MILK 180ml",
+      "unit": "lốc",
+      "observed_factors": [
+        4.0
+      ]
+    },
+    {
+      "product_name": "Sữa TH true MILK 180ml",
+      "unit": "thùng",
+      "observed_factors": [
+        48.0
+      ]
+    },
+    {
+      "product_name": "Sữa chua Vinamilk có đường",
+      "unit": "hộp",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Sữa chua Vinamilk có đường",
+      "unit": "lốc",
+      "observed_factors": [
+        4.0
+      ]
+    },
+    {
+      "product_name": "Sữa chua Vinamilk có đường",
+      "unit": "thùng",
+      "observed_factors": [
+        48.0
+      ]
+    },
+    {
+      "product_name": "Sữa tươi Vinamilk 180ml",
+      "unit": "hộp",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Sữa tươi Vinamilk 180ml",
+      "unit": "lốc",
+      "observed_factors": [
+        4.0
+      ]
+    },
+    {
+      "product_name": "Sữa tươi Vinamilk 180ml",
+      "unit": "thùng",
+      "observed_factors": [
+        48.0
+      ]
+    },
+    {
+      "product_name": "Sữa tắm Lifebuoy 850g",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Sữa tắm Lifebuoy 850g",
+      "unit": "thùng",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Sữa đặc Ông Thọ 380g",
+      "unit": "hộp",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Sữa đặc Ông Thọ 380g",
+      "unit": "thùng",
+      "observed_factors": [
+        48.0
+      ]
+    },
+    {
+      "product_name": "Thuốc lá Jet",
+      "unit": "cây",
+      "observed_factors": [
+        10.0
+      ]
+    },
+    {
+      "product_name": "Thuốc lá Jet",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Thuốc lá Vinataba",
+      "unit": "cây",
+      "observed_factors": [
+        10.0
+      ]
+    },
+    {
+      "product_name": "Thuốc lá Vinataba",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Trà xanh 0 độ 455ml",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Trà xanh 0 độ 455ml",
+      "unit": "lốc",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Trà xanh 0 độ 455ml",
+      "unit": "thùng",
+      "observed_factors": [
+        24.0
+      ]
+    },
+    {
+      "product_name": "Trứng gà so",
+      "unit": "hộp 30",
+      "observed_factors": [
+        30.0
+      ]
+    },
+    {
+      "product_name": "Trứng gà so",
+      "unit": "quả",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Trứng gà so",
+      "unit": "vỉ",
+      "observed_factors": [
+        10.0
+      ]
+    },
+    {
+      "product_name": "Tã Bobby M 32 miếng",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Tã Bobby M 32 miếng",
+      "unit": "thùng",
+      "observed_factors": [
+        4.0
+      ]
+    },
+    {
+      "product_name": "Tương ớt Chinsu 250g",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Tương ớt Chinsu 250g",
+      "unit": "thùng",
+      "observed_factors": [
+        24.0
+      ]
+    },
+    {
+      "product_name": "Xà bông Lifebuoy 90g",
+      "unit": "cục",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Xà bông Lifebuoy 90g",
+      "unit": "lốc",
+      "observed_factors": [
+        6.0
+      ]
+    },
+    {
+      "product_name": "Xà bông Lifebuoy 90g",
+      "unit": "thùng",
+      "observed_factors": [
+        72.0
+      ]
+    },
+    {
+      "product_name": "Xúc xích Vissan 5 cây",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Xúc xích Vissan 5 cây",
+      "unit": "thùng",
+      "observed_factors": [
+        20.0
+      ]
+    },
+    {
+      "product_name": "Yakult 65ml",
+      "unit": "chai",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Yakult 65ml",
+      "unit": "lốc",
+      "observed_factors": [
+        5.0
+      ]
+    },
+    {
+      "product_name": "Yakult 65ml",
+      "unit": "thùng",
+      "observed_factors": [
+        50.0
+      ]
+    },
+    {
+      "product_name": "ĐƯỜNG BIÊN HÒA 1KG",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "ĐƯỜNG BIÊN HÒA 1KG",
+      "unit": "thùng",
+      "observed_factors": [
+        12.0
+      ]
+    },
+    {
+      "product_name": "Đường Biên Hòa 1kg",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Đường Biên Hòa 1kg",
+      "unit": "thùng",
+      "observed_factors": [
+        12.0
+      ]
+    },
+    {
+      "product_name": "Đậu phộng rang muối 200g",
+      "unit": "gói",
+      "observed_factors": [
+        1.0
+      ]
+    },
+    {
+      "product_name": "Đậu phộng rang muối 200g",
+      "unit": "thùng",
+      "observed_factors": [
+        20.0
+      ]
+    }
+  ],
+  "varying_unit_factors": [],
+  "calendar_date_range": [
+    "2024-01-01",
+    "2027-12-31"
+  ],
+  "calendar_rows": 1461,
+  "questions_biz_101": 40
+}

@@ -1,0 +1,6 @@
+{
+  "raw_rows_sqlite": 56501,
+  "dedup_rows_sqlite": 56501,
+  "distinct_order_ids_sqlite": 22428,
+  "sqlite_integrity": "ok"
+}

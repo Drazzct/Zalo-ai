@@ -1,0 +1,57 @@
+{
+  "zip_file": "/mnt/data/DataMate_biz101_RAW_to_STEP2_ONLY/00_RAW_INPUT/train_biz101_no_labels.zip",
+  "zip_sha256": "c7680f1184d72d9c131d36248a3317c1ea93d1ae4b204df5bbe538ab8310641d",
+  "biz_101_files": [
+    [
+      "train/data/biz_101/README.md",
+      4262
+    ],
+    [
+      "train/data/biz_101/ban_hang.csv",
+      5356971
+    ]
+  ],
+  "archive_members": [
+    {
+      "logical_name": "readme",
+      "zip_member": "train/data/biz_101/README.md",
+      "bytes": 4262,
+      "sha256": "c71cf95a70eb10d08546bbf7755d55509d6410e009119579c4528720dadb125a",
+      "rows": null,
+      "model_prompt_usage": "source for rules/schema/context"
+    },
+    {
+      "logical_name": "data",
+      "zip_member": "train/data/biz_101/ban_hang.csv",
+      "bytes": 5356971,
+      "sha256": "0c52e0f7becc6b4e928793f564b8d61809cd1f8cc03e40683c84e8ec12bc8e5f",
+      "rows": 56501,
+      "model_prompt_usage": "source for rules/schema/context"
+    },
+    {
+      "logical_name": "rulebook",
+      "zip_member": "train/rulebook.md",
+      "bytes": 18515,
+      "sha256": "740267bccba29df70f745bc39968bbec5b3e62dada2c858c45314f3ec723d113",
+      "rows": null,
+      "model_prompt_usage": "source for rules/schema/context"
+    },
+    {
+      "logical_name": "calendar",
+      "zip_member": "train/calendar.csv",
+      "bytes": 44048,
+      "sha256": "c2579905e8b4eb152a4833b05f1f72de3e3d2c517b5d610d7664aeeb2d6a75b3",
+      "rows": 1461,
+      "model_prompt_usage": "source for rules/schema/context"
+    },
+    {
+      "logical_name": "questions",
+      "zip_member": "train/questions.jsonl",
+      "bytes": 504081,
+      "sha256": "b258ebd978a6d51b3b0b431b26926f958e56522beeb7da2984fea8333e21cec1",
+      "rows": 3000,
+      "model_prompt_usage": "question text only, filtered business"
+    }
+  ],
+  "questions_biz_101": 40
+}

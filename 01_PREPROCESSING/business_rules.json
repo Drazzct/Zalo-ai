@@ -1,0 +1,132 @@
+{
+  "business_id": "biz_101",
+  "rulebook_sha256": "740267bccba29df70f745bc39968bbec5b3e62dada2c858c45314f3ec723d113",
+  "rules": [
+    {
+      "id": "R01",
+      "topic": "date_anchor",
+      "rule": "Cụm hôm nay/hôm qua/tháng này dựa trên questions.as_of_date; dữ liệu sau as_of_date không được tính cho câu hỏi as-of.",
+      "evidence": "train/rulebook.md: introduction",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R02",
+      "topic": "revenue_filter",
+      "rule": "Loại toàn bộ order có trạng thái hủy hoặc đổi trả, kể cả trả một phần; đang giao vẫn tính. Biz_101: Xong/Đang giao được tính, Đã hủy/Đổi trả bị loại.",
+      "evidence": "train/rulebook.md: §1; train/data/biz_101/ban_hang.csv: Kết quả",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R03",
+      "topic": "revenue_metric",
+      "rule": "Doanh thu = SUM(Thanh tien) các dòng của đơn hợp lệ, không phải SUM(Giá bán × so_luong); không cộng phí vận chuyển hay VAT, không trừ voucher cấp đơn nếu có.",
+      "evidence": "train/rulebook.md: §1; train/data/biz_101/README.md: Thanh tien",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R04",
+      "topic": "order_count",
+      "rule": "COUNT(DISTINCT Mã hóa đơn) trên các đơn không hủy và không trả, trong khoảng ngày đặt.",
+      "evidence": "train/rulebook.md: §1; train/data/biz_101/README.md: Mã hóa đơn/Ngày tháng",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R05",
+      "topic": "time_bounds",
+      "rule": "Khoảng từ X đến Y bao gồm cả hai; N ngày gần nhất kể cả hôm nay; tuần bắt đầu thứ Hai; tháng này kết thúc ở as_of_date.",
+      "evidence": "train/rulebook.md: §2",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R06",
+      "topic": "top_items",
+      "rule": "Bán chạy xếp theo SUM(Quy ra ĐV lẻ) của đơn hợp lệ, không theo doanh thu. Tie-break theo mã rồi tên nếu không có mã.",
+      "evidence": "train/rulebook.md: §3 and §9; train/data/biz_101/README.md: Quy ra ĐV lẻ",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R07",
+      "topic": "unit_conversion",
+      "rule": "Quy ra ĐV lẻ là số lượng đã quy đổi; hệ số theo từng mặt hàng và đơn vị trong README, không áp hệ số cố định toàn cửa hàng.",
+      "evidence": "train/data/biz_101/README.md: Quy ước; train/rulebook.md: §10",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R08",
+      "topic": "unit_specific_quantity",
+      "rule": "Nếu hỏi bán bao nhiêu kg, cộng lượng đã quy đổi của sản phẩm có đơn vị cơ bản kg; không mặc định mọi sản phẩm đều là kg.",
+      "evidence": "train/rulebook.md: §3; train/data/biz_101/README.md: quy đổi gạo",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R09",
+      "topic": "selling_price",
+      "rule": "Giá bán một đơn vị cơ bản vào ngày D dùng đơn giá trước discount của dòng bán, kể cả hủy/trả; phải quy đổi nếu dòng theo bao/lốc/thùng.",
+      "evidence": "train/rulebook.md: §5",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R10",
+      "topic": "identical_export",
+      "rule": "Hai dòng cùng order và đồng nhất ở mọi cột nguồn tính một lần; ở biz_101 kiểm tra thấy 0 dòng dư dạng này.",
+      "evidence": "train/rulebook.md: §8; computed profiler",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R11",
+      "topic": "no_data",
+      "rule": "Kỳ hoàn toàn ngoài phạm vi ngày có dữ liệu hoặc yêu cầu thông tin không được lưu có thể là unanswerable, không coi tự động là 0.",
+      "evidence": "train/rulebook.md: §7",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R12",
+      "topic": "reference_output",
+      "rule": "Nhãn type là number/date/string… theo answers.jsonl nhưng nhãn chỉ dùng evaluation; date ISO-8601, tiền số nguyên VND.",
+      "evidence": "train/rulebook.md: §9; train/answers.jsonl",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R13",
+      "topic": "customer_identity",
+      "rule": "Vì biz_101 không có mã khách, nhóm theo tên trên đơn, cần xử lý những tên chỉ khác cách viết; Khách lẻ không được tính như một khách có danh tính.",
+      "evidence": "train/rulebook.md: §3; train/data/biz_101/README.md: Đối tác",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R14",
+      "topic": "calendar",
+      "rule": "Tết Âm lịch theo các mốc 23 Chạp đến 10 Giêng đọc từ train/calendar.csv; không sử dụng tính toán ngày âm phỏng đoán.",
+      "evidence": "train/rulebook.md: §2; train/calendar.csv",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    },
+    {
+      "id": "R15",
+      "topic": "rounding",
+      "rule": "Tiền làm tròn đồng theo rulebook; trung bình tiền làm tròn nửa đồng lên; percent thường 2 chữ số thập phân.",
+      "evidence": "train/rulebook.md: §3; §9",
+      "applicability_to_biz_101": true,
+      "confidence": "verified_source_rule"
+    }
+  ],
+  "important_gaps": [
+    "No cost/inventory/receivables tables in business 101",
+    "No explicit unique order-line ID in source",
+    "Source lacks declared foreign keys",
+    "No official Docker contest guideline contained in train.zip"
+  ]
+}

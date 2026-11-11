@@ -1,0 +1,335 @@
+{
+  "schema_version": "step1.0",
+  "business_id": "biz_101",
+  "engine": "sqlite",
+  "database_path": "biz_101.sqlite",
+  "source_csv": "train/data/biz_101/ban_hang.csv",
+  "grain": "one item line per order; order_id repeats across lines",
+  "tables": [
+    {
+      "name": "sales_lines_raw",
+      "type": "table",
+      "primary_key": [
+        "source_csv_line"
+      ],
+      "columns": [
+        {
+          "name": "sale_price_vnd",
+          "source_name": "Giá bán",
+          "sqlite_type": "INTEGER",
+          "non_null": true,
+          "distinct_values": 118,
+          "missing_values": 0,
+          "example": "10,000",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "order_status",
+          "source_name": "Kết quả",
+          "sqlite_type": "TEXT",
+          "non_null": true,
+          "distinct_values": 4,
+          "missing_values": 0,
+          "example": "Xong",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "product_name",
+          "source_name": "Nội dung",
+          "sqlite_type": "TEXT",
+          "non_null": true,
+          "distinct_values": 70,
+          "missing_values": 0,
+          "example": "Mì Hảo Hảo tôm chua cay",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "order_date",
+          "source_name": "Ngày tháng",
+          "sqlite_type": "TEXT",
+          "non_null": true,
+          "distinct_values": 450,
+          "missing_values": 0,
+          "example": "25 thg 2 2026",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "unit",
+          "source_name": "Đơn vị (tính)",
+          "sqlite_type": "TEXT",
+          "non_null": true,
+          "distinct_values": 16,
+          "missing_values": 0,
+          "example": "gói",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "quantity",
+          "source_name": "so_luong",
+          "sqlite_type": "INTEGER",
+          "non_null": true,
+          "distinct_values": 10,
+          "missing_values": 0,
+          "example": "1",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "line_amount_vnd",
+          "source_name": "Thanh tien",
+          "sqlite_type": "INTEGER",
+          "non_null": true,
+          "distinct_values": 392,
+          "missing_values": 0,
+          "example": "10,000",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "base_quantity",
+          "source_name": "Quy ra ĐV lẻ",
+          "sqlite_type": "INTEGER",
+          "non_null": true,
+          "distinct_values": 33,
+          "missing_values": 0,
+          "example": "1",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "order_id",
+          "source_name": "Mã hóa đơn",
+          "sqlite_type": "TEXT",
+          "non_null": true,
+          "distinct_values": 22428,
+          "missing_values": 0,
+          "example": "ORD000002",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "customer_name",
+          "source_name": "Đối tác",
+          "sqlite_type": "TEXT",
+          "non_null": true,
+          "distinct_values": 261,
+          "missing_values": 0,
+          "example": "Khách lẻ",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "source_csv_line",
+          "source_name": null,
+          "sqlite_type": "INTEGER",
+          "description": "Original CSV line position, starting from 2, primary key of staging; not business primary key"
+        },
+        {
+          "name": "is_duplicate_export",
+          "source_name": null,
+          "sqlite_type": "INTEGER",
+          "description": "1 for repeated identical source record within same order, 0 otherwise; all currently 0"
+        }
+      ],
+      "source": "all 56501 data rows"
+    },
+    {
+      "name": "sales_lines",
+      "type": "view",
+      "columns": [
+        {
+          "name": "sale_price_vnd",
+          "source_name": "Giá bán",
+          "sqlite_type": "INTEGER",
+          "non_null": true,
+          "distinct_values": 118,
+          "missing_values": 0,
+          "example": "10,000",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "order_status",
+          "source_name": "Kết quả",
+          "sqlite_type": "TEXT",
+          "non_null": true,
+          "distinct_values": 4,
+          "missing_values": 0,
+          "example": "Xong",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "product_name",
+          "source_name": "Nội dung",
+          "sqlite_type": "TEXT",
+          "non_null": true,
+          "distinct_values": 70,
+          "missing_values": 0,
+          "example": "Mì Hảo Hảo tôm chua cay",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "order_date",
+          "source_name": "Ngày tháng",
+          "sqlite_type": "TEXT",
+          "non_null": true,
+          "distinct_values": 450,
+          "missing_values": 0,
+          "example": "25 thg 2 2026",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "unit",
+          "source_name": "Đơn vị (tính)",
+          "sqlite_type": "TEXT",
+          "non_null": true,
+          "distinct_values": 16,
+          "missing_values": 0,
+          "example": "gói",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "quantity",
+          "source_name": "so_luong",
+          "sqlite_type": "INTEGER",
+          "non_null": true,
+          "distinct_values": 10,
+          "missing_values": 0,
+          "example": "1",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "line_amount_vnd",
+          "source_name": "Thanh tien",
+          "sqlite_type": "INTEGER",
+          "non_null": true,
+          "distinct_values": 392,
+          "missing_values": 0,
+          "example": "10,000",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "base_quantity",
+          "source_name": "Quy ra ĐV lẻ",
+          "sqlite_type": "INTEGER",
+          "non_null": true,
+          "distinct_values": 33,
+          "missing_values": 0,
+          "example": "1",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "order_id",
+          "source_name": "Mã hóa đơn",
+          "sqlite_type": "TEXT",
+          "non_null": true,
+          "distinct_values": 22428,
+          "missing_values": 0,
+          "example": "ORD000002",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "customer_name",
+          "source_name": "Đối tác",
+          "sqlite_type": "TEXT",
+          "non_null": true,
+          "distinct_values": 261,
+          "missing_values": 0,
+          "example": "Khách lẻ",
+          "source": "train/data/biz_101/ban_hang.csv + README.md"
+        },
+        {
+          "name": "source_csv_line",
+          "source_name": null,
+          "sqlite_type": "INTEGER",
+          "description": "Original CSV line position, starting from 2, primary key of staging; not business primary key"
+        }
+      ],
+      "definition": "SELECT from sales_lines_raw WHERE is_duplicate_export=0",
+      "source": "deduplicated view mandated by rulebook §8 (zero duplicates found)"
+    },
+    {
+      "name": "calendar",
+      "type": "table",
+      "primary_key": [
+        "date"
+      ],
+      "columns": [
+        {
+          "name": "date",
+          "source_name": "date",
+          "sqlite_type": "TEXT"
+        },
+        {
+          "name": "weekday",
+          "source_name": "weekday",
+          "sqlite_type": "INTEGER"
+        },
+        {
+          "name": "lunar_day",
+          "source_name": "lunar_day",
+          "sqlite_type": "INTEGER"
+        },
+        {
+          "name": "lunar_month",
+          "source_name": "lunar_month",
+          "sqlite_type": "INTEGER"
+        },
+        {
+          "name": "lunar_year",
+          "source_name": "lunar_year",
+          "sqlite_type": "INTEGER"
+        },
+        {
+          "name": "lunar_leap",
+          "source_name": "lunar_leap",
+          "sqlite_type": "INTEGER"
+        },
+        {
+          "name": "holiday",
+          "source_name": "holiday",
+          "sqlite_type": "TEXT"
+        }
+      ],
+      "source": "train/calendar.csv"
+    }
+  ],
+  "relationships": [
+    {
+      "from": "sales_lines.order_date",
+      "to": "calendar.date",
+      "type": "date lookup",
+      "confidence": "verified date format/domain; not declared FK"
+    }
+  ],
+  "candidate_business_keys": [
+    {
+      "columns": [
+        "order_id"
+      ],
+      "grain": "order, NOT unique per line",
+      "confidence": "verified by grouping; no FK declared"
+    }
+  ],
+  "source_to_target_mapping": {
+    "Giá bán": "sale_price_vnd",
+    "Kết quả": "order_status",
+    "Nội dung": "product_name",
+    "Ngày tháng": "order_date",
+    "Đơn vị (tính)": "unit",
+    "so_luong": "quantity",
+    "Thanh tien": "line_amount_vnd",
+    "Quy ra ĐV lẻ": "base_quantity",
+    "Mã hóa đơn": "order_id",
+    "Đối tác": "customer_name"
+  },
+  "validation": {
+    "rows": 56501,
+    "orders": 22428,
+    "date_range": [
+      "2025-06-01",
+      "2026-08-24"
+    ],
+    "parse_errors": 0
+  },
+  "remarks": [
+    "SQLite logical date values are ISO-8601 TEXT; sources remain unchanged in sources/",
+    "Do not send database file path as an instruction to the model; executor reads it locally",
+    "Do not confuse candidate order key with unique row key",
+    "No unobserved tables such as inventory, purchases, payments are created"
+  ]
+}
