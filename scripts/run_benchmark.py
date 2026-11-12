@@ -101,10 +101,16 @@ def main():
       default=1,
       help='Number of concurrent workers for processing questions (default: 1)',
   )
+  parser.add_argument(
+      '--questions-file',
+      type=str,
+      default=None,
+      help='Path to custom questions.jsonl (e.g. rewritten/converted questions)',
+  )
 
   args = parser.parse_args()
   split_path = Path(args.split_dir)
-  q_file = split_path / 'questions.jsonl'
+  q_file = Path(args.questions_file) if args.questions_file else split_path / 'questions.jsonl'
   rb_file = split_path / 'rulebook.md'
   cal_file = split_path / 'calendar.csv'
   data_dir = split_path / 'data'
