@@ -38,14 +38,14 @@ def solve(con):
 
 
 class OllamaClient(BaseLLMClient):
-  """Ollama REST API client using standard library urllib."""
+  """Ollama REST API client using standard library urllib with retry mechanism."""
 
   def __init__(
       self,
       model_name: str = 'qwen2.5-coder:7b',
       host: str = 'http://127.0.0.1:11434',
       temperature: float = 0.0,
-      timeout: float = 180.0,
+      timeout: float = 300.0,
       num_ctx: int = 16384,
   ):
     self.model_name = model_name
@@ -74,17 +74,30 @@ class OllamaClient(BaseLLMClient):
         headers={'Content-Type': 'application/json; charset=utf-8'},
     )
 
-    try:
-      with urllib.request.urlopen(req, timeout=self.timeout) as response:
-        res_data = json.loads(response.read().decode('utf-8'))
-        return res_data.get('response', '')
-    except urllib.error.URLError as e:
-      raise ConnectionError(
-          f'Could not connect to Ollama at {self.host}. Make sure "ollama serve"'
-          f' is running: {e}'
-      )
-    except Exception as e:
-      raise RuntimeError(f'Ollama generation error: {e}')
+    max_attempts = 2
+    for attempt in range(max_attempts):
+      try:
+        with urllib.request.urlopen(req, timeout=self.timeout) as response:
+          res_data = json.loads(response.read().decode('utf-8'))
+          return res_data.get('response', '')
+      except urllib.error.URLError as e:
+        if attempt < max_attempts - 1:
+          time.sleep(2)
+          continue
+        raise ConnectionError(
+            f'Could not connect to Ollama at {self.host}. Make sure "ollama serve"'
+            f' is running: {e}'
+        )
+      except TimeoutError as e:
+        if attempt < max_attempts - 1:
+          time.sleep(3)
+          continue
+        raise TimeoutError(f'Ollama request timed out after {self.timeout}s: {e}')
+      except Exception as e:
+        if attempt < max_attempts - 1:
+          time.sleep(2)
+          continue
+        raise RuntimeError(f'Ollama generation error: {e}')
 
 
 class OpenAICompatibleClient(BaseLLMClient):

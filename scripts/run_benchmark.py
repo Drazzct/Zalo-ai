@@ -162,7 +162,10 @@ def main():
         biz_id = q['business_id']
         biz_dir = data_dir / biz_id
 
-        ans_obj = pipeline.solve_question(q, biz_dir, log_dir=log_path)
+        try:
+          ans_obj = pipeline.solve_question(q, biz_dir, log_dir=log_path)
+        except Exception as exc:
+          ans_obj = {'id': q['id'], 'type': 'unanswerable', 'reason': f'Execution error: {exc}'}
         # Ensure clean json line
         line = json.dumps(ans_obj, ensure_ascii=False)
         out_f.write(line + '\n')
@@ -179,7 +182,10 @@ def main():
       idx, q = item
       b_id = q['business_id']
       b_dir = data_dir / b_id
-      ans = pipeline.solve_question(q, b_dir, log_dir=log_path)
+      try:
+        ans = pipeline.solve_question(q, b_dir, log_dir=log_path)
+      except Exception as exc:
+        ans = {'id': q['id'], 'type': 'unanswerable', 'reason': f'Worker execution error: {exc}'}
       ans_prev = f"type={ans.get('type')}, answer={ans.get('answer', ans.get('reason'))}"
       print(f"[{idx + 1}/{len(questions)}] {q['id']} ({b_id}) -> {ans_prev}", flush=True)
       return idx, ans

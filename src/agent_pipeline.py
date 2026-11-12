@@ -147,8 +147,19 @@ class ReasoningPipeline:
 
     # 4. Code Generation & Sandbox Reflection Loop
     for attempt in range(self.max_retries + 1):
-      llm_response = self.llm_client.generate(current_prompt)
-      code_str = extract_python_code(llm_response)
+      try:
+        llm_response = self.llm_client.generate(current_prompt)
+        code_str = extract_python_code(llm_response)
+      except Exception as e:
+        history_logs.append({
+            'attempt': attempt + 1,
+            'code': '',
+            'exec_success': False,
+            'exec_result': None,
+            'exec_error': f'LLM generation error: {e}',
+            'elapsed_sec': 0.0,
+        })
+        break
 
       exec_res = self.sandbox.execute_code(code_str, ingestor.con.cursor(), as_of_date=as_of)
       history_logs.append({
