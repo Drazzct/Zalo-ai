@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import time
 import pytest
-from src.agent_pipeline import MockLLMClient, ReasoningPipeline, extract_python_code
+from src.agent_pipeline import MockLLMClient, ReasoningPipeline, extract_python_code, extract_reasoning
 from src.calendar_resolver import CalendarResolver
 from src.data_ingestor import DataIngestor
 from src.prompt_generator import PromptGenerator
@@ -196,4 +196,36 @@ def solve(con):
     assert ans['type'] == 'boolean'
     assert ans['answer'] is True
     assert ref_client.call_count == 2
+
+  def test_extract_reasoning_and_prompt(self):
+    sample_llm_output = """<reasoning>
+1. Câu hỏi yêu cầu tính doanh thu ngày hôm nay (2026-08-27).
+2. Dùng bảng ban_hang, cột ngay_ban và thanh_tien.
+3. Loại bỏ đơn hủy hoặc hoàn trả.
+</reasoning>
+
+```python
+def solve(con):
+    res = con.execute("SELECT SUM(thanh_tien) FROM ban_hang").fetchone()[0]
+    return {"type": "number", "answer": int(res)}
+```"""
+    reasoning = extract_reasoning(sample_llm_output)
+    code = extract_python_code(sample_llm_output)
+
+    assert "Câu hỏi yêu cầu tính doanh thu" in reasoning
+    assert "def solve(con):" in code
+    assert "<reasoning>" not in code
+
+    # Test prompt generation with reasoning
+    prompt = PromptGenerator.generate_prompt(
+        question="Doanh thu hôm nay?",
+        as_of_date="2026-08-27",
+        schema_context="CREATE TABLE ban_hang ...",
+        rules_summary="Rule 1: ...",
+        temporal_anchors={},
+        enable_reasoning=True,
+    )
+    assert "<reasoning>" in prompt
+    assert "HƯỚNG DẪN SUY LUẬN TỪNG BƯỚC" in prompt
+
 

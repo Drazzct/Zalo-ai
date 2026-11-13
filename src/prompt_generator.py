@@ -266,6 +266,7 @@ def solve(con):
       temporal_anchors: Dict[str, Any],
       available_tables: Optional[List[str]] = None,
       table_profiles: Optional[Dict[str, Any]] = None,
+      enable_reasoning: bool = False,
   ) -> str:
     """Generate master prompt combining schema, rules, temporal anchors, table routing, and user question."""
     temp_info = []
@@ -313,7 +314,21 @@ def solve(con):
 
 ### CÂU HỎI CỦA NGƯỜI DÙNG:
 \"{question}\" (as_of_date: {as_of_date})
+"""
+    if enable_reasoning:
+      prompt += """
+### HƯỚNG DẪN SUY LUẬN TỪNG BƯỚC (REASONING PROCESS):
+Trước khi viết mã Python, bạn BẮT BUỘC phải suy luận logic nghiệp vụ từng bước bên trong thẻ <reasoning> ... </reasoning>:
+1. Phân tích câu hỏi: Cần tính chỉ số gì? Kiểu đáp án mong đợi là gì (number, percent, date, string, boolean, list, table)?
+2. Mốc thời gian: as_of_date là bao nhiêu? Khoảng ngày [từ ngày ... đến ngày ...] là gì? Kiểm tra kỳ hỏi có nằm ngoài dữ liệu (Rule 7) không?
+3. Bảng và Cột: Chọn bảng phù hợp từ CƠ SỞ DỮ LIỆU CỬA HÀNG ở trên. Xác định tên cột ngày, cột tiền, cột trạng thái, mã đơn.
+4. Quy tắc nghiệp vụ & SQL: Lọc đơn hủy/trả thế nào? Cần lọc dấu tiếng Việt ra sao? Có cần ORDER BY và LIMIT không?
+5. Xử lý ngoại lệ: Nếu bảng không có dữ liệu phù hợp hoặc kỳ hỏi nằm ngoài phạm vi, trả về {"type": "unanswerable", "reason": "..."}.
 
+Sau khi kết thúc </reasoning>, viết khối mã Python duy nhất trong ```python ... ```:
+"""
+    else:
+      prompt += """
 Hãy viết hàm `solve(con)` bằng Python để trả lời câu hỏi trên:
 """
     return prompt

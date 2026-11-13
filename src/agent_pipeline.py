@@ -49,6 +49,22 @@ def extract_python_code(text: str) -> str:
   return text.strip()
 
 
+def extract_reasoning(text: str) -> str:
+  """Extract reasoning thoughts from <reasoning>...</reasoning> or <think>...</think>."""
+  # Look for <reasoning> ... </reasoning> or <think> ... </think>
+  pattern = r'<(?:reasoning|think)>(.*?)</(?:reasoning|think)>'
+  matches = re.findall(pattern, text, flags=re.DOTALL | re.IGNORECASE)
+  if matches:
+    return matches[0].strip()
+
+  # Fallback: text before the first code fence ```
+  parts = text.split('```')
+  if len(parts) > 1 and parts[0].strip():
+    return parts[0].strip()
+
+  return ''
+
+
 class ReasoningPipeline:
   """Main Reasoning Pipeline for Vietnamese SME Question Answering."""
 
@@ -59,6 +75,7 @@ class ReasoningPipeline:
       llm_client: LLMClient,
       sandbox_timeout: float = 10.0,
       max_retries: int = 2,
+      enable_reasoning: bool = False,
   ):
     self.rulebook_path = rulebook_path
     self.calendar_path = calendar_path
@@ -68,6 +85,7 @@ class ReasoningPipeline:
     self.llm_client = llm_client
     self.sandbox = ExecutionSandbox(timeout_sec=sandbox_timeout)
     self.max_retries = max_retries
+    self.enable_reasoning = enable_reasoning
 
     # Cache for ingested businesses: {biz_id: (ingestor, profiler)}
     self.biz_cache: Dict[str, Tuple[DataIngestor, SchemaProfiler]] = {}
@@ -139,6 +157,7 @@ class ReasoningPipeline:
         temporal_anchors=temporal_anchors,
         available_tables=list(profiler.table_profiles.keys()),
         table_profiles=profiler.table_profiles,
+        enable_reasoning=self.enable_reasoning,
     )
 
     history_logs = []
@@ -150,9 +169,11 @@ class ReasoningPipeline:
       try:
         llm_response = self.llm_client.generate(current_prompt)
         code_str = extract_python_code(llm_response)
+        reasoning_str = extract_reasoning(llm_response)
       except Exception as e:
         history_logs.append({
             'attempt': attempt + 1,
+            'reasoning': '',
             'code': '',
             'exec_success': False,
             'exec_result': None,
@@ -164,6 +185,7 @@ class ReasoningPipeline:
       exec_res = self.sandbox.execute_code(code_str, ingestor.con.cursor(), as_of_date=as_of)
       history_logs.append({
           'attempt': attempt + 1,
+          'reasoning': reasoning_str,
           'code': code_str,
           'exec_success': exec_res['success'],
           'exec_result': exec_res['result'],

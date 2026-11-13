@@ -107,6 +107,11 @@ def main():
       default=None,
       help='Path to custom questions.jsonl (e.g. rewritten/converted questions)',
   )
+  parser.add_argument(
+      '--reasoning',
+      action='store_true',
+      help='Enable step-by-step reasoning in prompt before code generation',
+  )
 
   args = parser.parse_args()
   split_path = Path(args.split_dir)
@@ -146,6 +151,7 @@ def main():
       llm_client=llm_client,
       sandbox_timeout=10.0,
       max_retries=2,
+      enable_reasoning=args.reasoning,
   )
 
   out_path = Path(args.output)
