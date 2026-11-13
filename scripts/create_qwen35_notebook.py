@@ -191,7 +191,7 @@ display(Markdown(f\"\"\"### 💭 BƯỚC SUY LUẬN (REASONING / CHAIN-OF-THOUGH
 Thiết lập số lượng câu hỏi để chạy thử nghiệm benchmark song song 4 luồng trên GPU."""))
     nb["cells"].append(code("""# CẤU HÌNH BENCHMARK
 SAMPLE_SIZE = 10       # Đổi thành 50, 100 hoặc để None nếu muốn chạy toàn bộ tập train
-WORKERS = 4            # 4 luồng song song tối ưu cho T4 GPU
+WORKERS = 2            # Khuyến nghị: 2 luồng (hoặc 1 luồng) cho model 9B trên T4 GPU để tránh nghẽn GPU/timeout
 OUTPUT_FILE = "result/submission_qwen35.jsonl"
 LOG_DIR = "result/logs_qwen35"
 
@@ -216,14 +216,16 @@ import pandas as pd
 from pathlib import Path
 from IPython.display import display, Markdown
 
-# Tải Ground Truth để đối chiếu
+# Tải Ground Truth (answers.jsonl) để đối chiếu
+gt_file = "train/answers.jsonl" if os.path.exists("train/answers.jsonl") else "train/ground_truth.jsonl"
 gt_map = {}
-if os.path.exists("train/ground_truth.jsonl"):
-    with open("train/ground_truth.jsonl", "r", encoding="utf-8") as f:
+if os.path.exists(gt_file):
+    with open(gt_file, "r", encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 item = json.loads(line)
                 gt_map[item["id"]] = item
+    print(f"✅ Đã nạp {len(gt_map)} đáp án Ground Truth từ {gt_file}")
 
 # Đọc câu hỏi gốc
 q_map = {}

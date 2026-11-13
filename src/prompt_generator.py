@@ -46,6 +46,10 @@ QUY TẮC BẮT BUỘC:
      `SUBSTRING(CAST(col AS VARCHAR), 1, 10) >= 'YYYY-MM-DD' AND SUBSTRING(CAST(col AS VARCHAR), 1, 10) <= 'YYYY-MM-DD'`
      TUYỆT ĐỐI KHÔNG dùng so sánh bằng trực tiếp `col = 'YYYY-MM-DD'` nếu cột chứa giờ phút.
    - Bảng chia theo thời gian hoặc nghiệp vụ: Nếu shop có nhiều bảng (ví dụ bảng năm 2025 và bảng năm 2026, hoặc bảng bán hàng vs bảng nhập hàng), hãy đọc kỹ phần "GỢI Ý BẢNG VÀ CỘT PHÙ HỢP" và khoảng ngày (Kỳ) của từng bảng để chọn đúng bảng.
+    - Đếm số đơn thoả mãn điều kiện gom nhóm (GROUP BY ... HAVING):
+      Khi đếm số lượng đơn hàng có tổng tiền/doanh thu thoả mãn điều kiện (ví dụ: có doanh thu từ X đồng trở lên), BẮT BUỘC dùng Subquery đếm bên ngoài:
+      `SELECT COUNT(*) FROM (SELECT ma_don_hang FROM <bảng> WHERE ... GROUP BY ma_don_hang HAVING SUM(thanh_tien) >= X)`
+      TUYỆT ĐỐI KHÔNG viết `SELECT COUNT(DISTINCT ma_don_hang) ... GROUP BY ma_don_hang HAVING ...` vì GROUP BY sẽ làm mỗi nhóm COUNT luôn chỉ bằng 1!
 """
 
   @classmethod
