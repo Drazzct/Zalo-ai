@@ -42,6 +42,12 @@ def extract_python_code(text: str) -> str:
         return m.strip()
     return matches[-1].strip()
 
+  # Fallback: unclosed code block if response was truncated (```python ... EOF)
+  if '```python' in text:
+    unclosed = text.split('```python', 1)[1]
+    if 'def solve' in unclosed:
+      return unclosed.strip()
+
   # If no markdown fences, check if raw code contains def solve
   if 'def solve' in text:
     return text.strip()
@@ -51,13 +57,20 @@ def extract_python_code(text: str) -> str:
 
 def extract_reasoning(text: str) -> str:
   """Extract reasoning thoughts from <reasoning>...</reasoning> or <think>...</think>."""
-  # Look for <reasoning> ... </reasoning> or <think> ... </think>
+  # Look for closed <reasoning> ... </reasoning> or <think> ... </think>
   pattern = r'<(?:reasoning|think)>(.*?)</(?:reasoning|think)>'
   matches = re.findall(pattern, text, flags=re.DOTALL | re.IGNORECASE)
   if matches:
     return matches[0].strip()
 
-  # Fallback: text before the first code fence ```
+  # Fallback 1: unclosed <reasoning> or <think> tag if truncated before closing
+  unclosed = re.findall(r'<(?:reasoning|think)>(.*)', text, flags=re.DOTALL | re.IGNORECASE)
+  if unclosed:
+    raw_thought = unclosed[0].split('```')[0].strip()
+    if raw_thought:
+      return raw_thought
+
+  # Fallback 2: text before the first code fence ```
   parts = text.split('```')
   if len(parts) > 1 and parts[0].strip():
     return parts[0].strip()
@@ -185,6 +198,7 @@ class ReasoningPipeline:
       exec_res = self.sandbox.execute_code(code_str, ingestor.con.cursor(), as_of_date=as_of)
       history_logs.append({
           'attempt': attempt + 1,
+          'raw_response': llm_response,
           'reasoning': reasoning_str,
           'code': code_str,
           'exec_success': exec_res['success'],

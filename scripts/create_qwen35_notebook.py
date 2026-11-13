@@ -149,8 +149,9 @@ with open(f"result/single_demo/{sample_q['id']}.json", "r", encoding="utf-8") as
     demo_log = json.load(f)
 
 trace = demo_log["trace"][-1]
-reasoning_text = trace.get("reasoning", "Không có reasoning")
-code_text = trace.get("code", "Không có code")
+reasoning_text = trace.get("reasoning") or trace.get("raw_response") or "Không có reasoning (model không sinh thẻ reasoning hoặc bị lỗi)"
+code_text = trace.get("code") or "# Không có code sinh ra"
+exec_error = trace.get("exec_error") or "None"
 
 display(Markdown(f\"\"\"### 💭 BƯỚC SUY LUẬN (REASONING / CHAIN-OF-THOUGHT):
 ```text
@@ -162,7 +163,12 @@ display(Markdown(f\"\"\"### 💭 BƯỚC SUY LUẬN (REASONING / CHAIN-OF-THOUGH
 {code_text}
 ```
 
-### ⚡ KẾT QUẢ THỰC THI SANDBOX:
+### ⚙️ CHI TIẾT THỰC THI:
+- **Trạng thái Sandbox:** `{'Thành công' if trace.get('exec_success') else 'Thất bại'}`
+- **Lỗi Sandbox (nếu có):** `{exec_error}`
+- **Số lần thử (Attempts):** `{len(demo_log.get('trace', []))}`
+
+### ⚡ ĐÁP ÁN CUỐI CÙNG:
 - **Return Type:** `{demo_ans.get('type')}`
 - **Answer:** `{demo_ans.get('answer', demo_ans.get('reason'))}`
 - **Thời gian chạy:** `{demo_log.get('elapsed_seconds')}s`

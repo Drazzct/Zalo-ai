@@ -47,12 +47,14 @@ class OllamaClient(BaseLLMClient):
       temperature: float = 0.0,
       timeout: float = 300.0,
       num_ctx: int = 16384,
+      num_predict: int = 1536,
   ):
     self.model_name = model_name
     self.host = host.rstrip('/')
     self.temperature = temperature
     self.timeout = timeout
     self.num_ctx = num_ctx
+    self.num_predict = num_predict
 
   def generate(self, prompt: str) -> str:
     url = f'{self.host}/api/generate'
@@ -62,7 +64,7 @@ class OllamaClient(BaseLLMClient):
         'stream': False,
         'options': {
             'temperature': self.temperature,
-            'num_predict': 512,
+            'num_predict': self.num_predict,
             'num_ctx': self.num_ctx,
             'stop': ['```\n\n', '```\r\n\r\n'],
         },
