@@ -46,21 +46,33 @@ Notebook này được thiết kế chuyên biệt để:
     nb["cells"].append(code("!nvidia-smi"))
 
     # Cell 3: Setup Codebase
-    nb["cells"].append(md("""## 2. Thiết lập Mã nguồn Dự án trên Colab
-Tự động nhận diện thư mục làm việc hoặc giải nén từ file `Zalo-ai.zip`."""))
-    nb["cells"].append(code("""import os, shutil
+    nb["cells"].append(md("""## 2. Thiết lập Mã nguồn Dự án trên Colab (Tự động Clone / Pull từ GitHub)
+Tự động clone hoặc kéo code mới nhất từ repository `https://github.com/Drazzct/Zalo-ai.git`."""))
+    nb["cells"].append(code("""import os
 
-# Tự động giải nén nếu có file Zalo-ai.zip
-if os.path.exists('/content/Zalo-ai.zip'):
-    print("📦 Đang giải nén Zalo-ai.zip...")
-    !unzip -q -o /content/Zalo-ai.zip -d /content/Zalo-ai
-    %cd /content/Zalo-ai
-elif os.path.exists('/content/Zalo-ai'):
-    %cd /content/Zalo-ai
+REPO_URL = "https://github.com/Drazzct/Zalo-ai.git"
+TARGET_DIR = "/content/Zalo-ai"
+
+if os.path.exists("/content"):
+    # Đang chạy trên Google Colab
+    if not os.path.exists(TARGET_DIR):
+        print(f"📦 Đang clone mã nguồn mới nhất từ {REPO_URL}...")
+        !git clone {REPO_URL} {TARGET_DIR}
+    else:
+        print(f"🔄 Thư mục {TARGET_DIR} đã tồn tại, đang tự động đồng bộ (git pull) bản mới nhất từ GitHub...")
+        %cd {TARGET_DIR}
+        !git fetch origin main && git reset --hard origin/main
+    %cd {TARGET_DIR}
 else:
-    print("ℹ️ Đang chạy trong thư mục hiện tại:", os.getcwd())
+    # Đang chạy trên máy local
+    print(f"ℹ️ Đang chạy trên môi trường local: {os.getcwd()}")
+    try:
+        !git pull origin main
+    except Exception:
+        pass
 
-print("✅ Thư mục làm việc hiện tại:", os.getcwd())"""))
+print("✅ Thư mục làm việc hiện tại:", os.getcwd())
+!git log -1 --oneline"""))
 
     # Cell 4: Dependencies
     nb["cells"].append(md("## 3. Cài đặt các thư viện Python"))
