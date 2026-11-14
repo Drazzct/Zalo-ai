@@ -36,9 +36,10 @@ QUY TẮC BẮT BUỘC:
 4. QUY TẮC SQL CHUẨN XÁC CHO SME (RẤT QUAN TRỌNG):
    - Xử lý Tiếng Việt có dấu trong SQL: Từ "hủy" chứa ký tự "ủ" KHÔNG khớp với "u" trong LIKE '%hu%'!
      Khi lọc đơn hủy, BẮT BUỘC kiểm tra cả dấu và không dấu:
-     `(LOWER(col) LIKE '%hu%' OR LOWER(col) LIKE '%hủy%' OR LOWER(col) LIKE '%huỷ%' OR LOWER(col) LIKE '%cancel%')`
+     `(LOWER(col) LIKE '%hủy%' OR LOWER(col) LIKE '%huỷ%' OR LOWER(col) LIKE '%da huy%' OR LOWER(col) LIKE '%huy don%' OR LOWER(col) LIKE '%cancel%')`
      Khi loại trừ hủy và trả:
-     `(LOWER(col) NOT LIKE '%hu%' AND LOWER(col) NOT LIKE '%hủy%' AND LOWER(col) NOT LIKE '%cancel%' AND LOWER(col) NOT LIKE '%tr%' AND LOWER(col) NOT LIKE '%trả%')`
+     `(LOWER(col) NOT LIKE '%hủy%' AND LOWER(col) NOT LIKE '%huỷ%' AND LOWER(col) NOT LIKE '%cancel%' AND LOWER(col) NOT LIKE '%trả%' AND LOWER(col) NOT LIKE '%hoàn trả%' AND LOWER(col) NOT LIKE '%da huy%' AND LOWER(col) NOT LIKE '%huy don%')`
+     TUYỆT ĐỐI KHÔNG dùng `NOT LIKE '%hu%'` trần trụi vì ký tự 'hu' nằm trong chữ 'vận chuyển' (c-h-u-y-ể-n) sẽ làm lọc mất các đơn hàng đang giao hợp lệ!
    - So sánh Thời gian/Ngày: Cột ngày trong database có thể là VARCHAR hoặc TIMESTAMP chứa cả giờ phút ('YYYY-MM-DD HH:MM:SS').
      Khi so sánh hoặc lọc theo ngày, BẮT BUỘC dùng:
      `SUBSTRING(CAST(col AS VARCHAR), 1, 10) = 'YYYY-MM-DD'`
@@ -331,12 +332,17 @@ def solve(con):
     if enable_reasoning:
       prompt += """
 ### HƯỚNG DẪN SUY LUẬN TỪNG BƯỚC (REASONING PROCESS):
-Trước khi viết mã Python, bạn BẮT BUỘC phải suy luận logic nghiệp vụ từng bước bên trong thẻ <reasoning> ... </reasoning>:
-1. Phân tích câu hỏi: Cần tính chỉ số gì? Kiểu đáp án mong đợi là gì (number, percent, date, string, boolean, list, table)?
-2. Mốc thời gian: as_of_date là bao nhiêu? Khoảng ngày [từ ngày ... đến ngày ...] là gì? Kiểm tra kỳ hỏi có nằm ngoài dữ liệu (Rule 7) không?
-3. Bảng và Cột: Chọn bảng phù hợp từ CƠ SỞ DỮ LIỆU CỬA HÀNG ở trên. Xác định tên cột ngày, cột tiền, cột trạng thái, mã đơn.
-4. Quy tắc nghiệp vụ & SQL: Lọc đơn hủy/trả thế nào? Cần lọc dấu tiếng Việt ra sao? Có cần ORDER BY và LIMIT không?
-5. Xử lý ngoại lệ: Nếu bảng không có dữ liệu phù hợp hoặc kỳ hỏi nằm ngoài phạm vi, trả về {"type": "unanswerable", "reason": "..."}.
+Trước khi viết mã Python, hãy suy luận logic nghiệp vụ NGẮN GỌN bên trong thẻ <reasoning> ... </reasoning>:
+1. Phân tích câu hỏi: Cần tính chỉ số gì? Kiểu đáp án mong đợi là gì (number, percent, date, string...)?
+2. Mốc thời gian: as_of_date là bao nhiêu? Khoảng ngày [từ ngày ... đến ngày ...] là gì?
+3. Bảng và Cột: Chọn đúng bảng và cột có thật từ CƠ SỞ DỮ LIỆU CỬA HÀNG ở trên.
+4. Quy tắc nghiệp vụ & SQL: Lọc đơn hủy/trả, ép kiểu tiền DOUBLE nếu là VARCHAR.
+5. Xử lý ngoại lệ: Nếu bảng không có dữ liệu phù hợp hoặc kỳ hỏi nằm ngoài phạm vi, trả về unanswerable.
+
+⚠️ NGUYÊN TẮC QUAN TRỌNG VỀ SUY LUẬN:
+- Suy luận NGẮN GỌN (dưới 200 từ), đi thẳng vào trọng tâm bảng/cột và câu SQL chính.
+- TUYỆT ĐỐI KHÔNG giải thích lan man, không viết nháp code dài dòng trong thẻ reasoning.
+- ĐÓNG THẺ </reasoning> NGAY sau khi chốt logic để dành trọn vẹn token sinh khối mã Python ```python ... ``` hoàn chỉnh!
 
 Sau khi kết thúc </reasoning>, viết khối mã Python duy nhất trong ```python ... ```:
 """

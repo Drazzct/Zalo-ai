@@ -290,14 +290,15 @@ def inspect_question_trace(qid, log_dir="result/logs_qwen35"):
 \"\"\"
     display(Markdown(md_content))
 
-# Lấy danh sách các câu đã được log
-log_files = sorted(glob.glob("result/logs_qwen35/*.json"))
-print(f"📊 Đã tìm thấy {len(log_files)} file logs trong result/logs_qwen35/\\n")
+# Lấy danh sách các câu đã được log (tự động phát hiện result/logs_qwen35 hoặc result/logs)
+log_dir = "result/logs_qwen35" if glob.glob("result/logs_qwen35/*.json") else "result/logs"
+log_files = sorted(glob.glob(f"{log_dir}/*.json"))
+print(f"📊 Đã tìm thấy {len(log_files)} file logs trong {log_dir}/\\n")
 
-# Hiển thị 5 câu đầu tiên làm mẫu
-for lf in log_files[:5]:
+# Hiển thị các câu hỏi đã log
+for lf in log_files:
     qid = Path(lf).stem
-    inspect_question_trace(qid)"""))
+    inspect_question_trace(qid, log_dir=log_dir)"""))
 
     # Cell 10: Benchmark Summary DataFrame & CSV Export
     nb["cells"].append(md("""## 8. Bảng Tổng Hợp Chi Tiết & Phân Tích Hiệu Suất
@@ -307,7 +308,8 @@ import json, glob
 from pathlib import Path
 
 rows = []
-log_files = sorted(glob.glob("result/logs_qwen35/*.json"))
+log_dir = "result/logs_qwen35" if glob.glob("result/logs_qwen35/*.json") else "result/logs"
+log_files = sorted(glob.glob(f"{log_dir}/*.json"))
 
 for lf in log_files:
     with open(lf, "r", encoding="utf-8") as f:
@@ -372,8 +374,57 @@ print(f"✅ Đã lưu báo cáo chi tiết vào: {output_csv}")
 # Hiển thị 10 dòng đầu của bảng
 display(df_report[["question_id", "business_id", "pred_type", "pred_answer", "gt_answer", "is_correct", "has_reasoning", "elapsed_sec"]].head(10))"""))
 
-    # Cell 11: Tips & Comparison
-    nb["cells"].append(md("""## 9. 💡 Hướng dẫn & Đánh giá Chiến lược
+    # Cell 11: Merge Logs to Single File & Download
+    nb["cells"].append(md("""## 9. 📦 Gộp Toàn Bộ File Log Thành 1 File & Tải Về Máy
+Cell này sẽ gộp tất cả các file JSON logs riêng lẻ thành **1 file duy nhất** (`all_logs.json`), 1 file **JSON Lines** (`merged_logs.jsonl`), và gói thành file ZIP để bạn dễ dàng tải về máy phân tích."""))
+    nb["cells"].append(code("""import json, glob, zipfile, os
+from pathlib import Path
+
+# 1. Tìm thư mục chứa log
+log_dir = "result/logs_qwen35" if glob.glob("result/logs_qwen35/*.json") else "result/logs"
+log_files = sorted(glob.glob(f"{log_dir}/*.json"))
+print(f"📦 Đang xử lý {len(log_files)} file log từ thư mục: '{log_dir}'")
+
+# 2. Gộp thành 1 file JSON duy nhất (all_logs.json)
+all_logs = []
+for lf in log_files:
+    with open(lf, "r", encoding="utf-8") as f:
+        all_logs.append(json.load(f))
+
+os.makedirs("result", exist_ok=True)
+merged_json_path = "result/all_logs.json"
+with open(merged_json_path, "w", encoding="utf-8") as f:
+    json.dump(all_logs, f, ensure_ascii=False, indent=2)
+print(f"✅ Đã gộp thành công {len(all_logs)} logs vào 1 file JSON: {merged_json_path}")
+
+# 3. Gộp thành file JSONL (mỗi dòng 1 câu hỏi)
+merged_jsonl_path = "result/merged_logs.jsonl"
+with open(merged_jsonl_path, "w", encoding="utf-8") as f:
+    for item in all_logs:
+        f.write(json.dumps(item, ensure_ascii=False) + "\\n")
+print(f"✅ Đã tạo file JSONL: {merged_jsonl_path}")
+
+# 4. Nén toàn bộ log thành file ZIP để tải về máy tiện lợi
+zip_path = "result/logs_bundle.zip"
+with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+    zipf.write(merged_json_path, arcname="all_logs.json")
+    zipf.write(merged_jsonl_path, arcname="merged_logs.jsonl")
+    if os.path.exists("result/qwen35_reasoning_benchmark_report.csv"):
+        zipf.write("result/qwen35_reasoning_benchmark_report.csv", arcname="benchmark_report.csv")
+    for lf in log_files:
+        zipf.write(lf, arcname=f"individual_logs/{Path(lf).name}")
+print(f"✅ Đã đóng gói thành file ZIP: {zip_path} ({os.path.getsize(zip_path)/1024:.1f} KB)")
+
+# 5. Tự động tải về máy nếu đang chạy trên Google Colab
+try:
+    from google.colab import files
+    print("⬇️ Đang mở hộp thoại tải file all_logs.json về máy tính...")
+    files.download(merged_json_path)
+except Exception:
+    print("ℹ️ Chạy trên môi trường local, bạn có thể xem trực tiếp file tại:", os.path.abspath(merged_json_path))"""))
+
+    # Cell 12: Tips & Comparison
+    nb["cells"].append(md("""## 10. 💡 Hướng dẫn & Đánh giá Chiến lược
 ### So sánh Đối đầu (A/B Comparison):
 - **Qwen2.5-Coder 7B (Không có reasoning):** Tốc độ nhanh nhưng dễ nhầm lẫn giữa bảng `don_hang` và `chi_tiet_don_hang`, hoặc quên lọc đơn hủy bằng Tiếng Việt có dấu.
 - **Qwen 3.5 9B (Kèm Reasoning CoT):** Khối `<reasoning>` ép mô hình phải "nghĩ trước khi làm", rà soát toàn bộ schema và as_of_date trước khi viết SQL. Điều này đặc biệt hiệu quả với các câu hỏi phức tạp (tính tỷ lệ huỷ, tìm sản phẩm bán chạy nhất, hoặc nhận biết kỳ dữ liệu không tồn tại để trả về `unanswerable`).
