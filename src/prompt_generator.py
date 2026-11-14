@@ -40,6 +40,16 @@ QUY TẮC BẮT BUỘC:
      Khi loại trừ hủy và trả:
      `(LOWER(col) NOT LIKE '%hủy%' AND LOWER(col) NOT LIKE '%huỷ%' AND LOWER(col) NOT LIKE '%cancel%' AND LOWER(col) NOT LIKE '%trả%' AND LOWER(col) NOT LIKE '%hoàn trả%' AND LOWER(col) NOT LIKE '%da huy%' AND LOWER(col) NOT LIKE '%huy don%')`
      TUYỆT ĐỐI KHÔNG dùng `NOT LIKE '%hu%'` trần trụi vì ký tự 'hu' nằm trong chữ 'vận chuyển' (c-h-u-y-ể-n) sẽ làm lọc mất các đơn hàng đang giao hợp lệ!
+      Ngoài huỷ và trả, nếu trạng thái đơn là 'không giao được', 'thất bại', 'that bai', BẮT BUỘC loại trừ khỏi doanh thu:
+      `AND LOWER(col) NOT LIKE '%không giao được%' AND LOWER(col) NOT LIKE '%that bai%' AND LOWER(col) NOT LIKE '%thất bại%'`
+   - Lọc Thuốc và Hoạt chất (Nhà thuốc):
+      Hoạt chất trong database có thể là đơn chất (ví dụ: 'Natri clorid') hoặc đa chất phối hợp nối bằng ' + ' (ví dụ: 'Natri clorid + Kali clorid + Natri citrat + Glucose').
+      Khi câu hỏi hỏi về một hoạt chất cụ thể (ví dụ: "Thuốc có hoạt chất Natri clorid"), BẮT BUỘC so sánh bằng chính xác:
+      `LOWER(TRIM(th.hoat_chat)) = 'natri clorid'`
+      TUYỆT ĐỐI KHÔNG dùng `LIKE '%natri clorid%'` vì sẽ bị cộng nhầm doanh thu của các thuốc phối hợp khác!
+   - Tỉ lệ huỷ đơn (CỰC KỲ QUAN TRỌNG):
+      Tử số CHỈ tính đơn có trạng thái HUỶ (chứa 'hủy', 'huỷ', 'cancel', 'da huy', 'huy don').
+      TUYỆT ĐỐI KHÔNG viết `LIKE '%trả%'` hay `LIKE '%hoàn%'` trong CASE WHEN của tử số đơn huỷ! Đơn trả hàng nằm ở mẫu số (tổng đơn), KHÔNG PHẢI đơn hủy!
    - So sánh Thời gian/Ngày: Cột ngày trong database có thể là VARCHAR hoặc TIMESTAMP chứa cả giờ phút ('YYYY-MM-DD HH:MM:SS').
      Khi so sánh hoặc lọc theo ngày, BẮT BUỘC dùng:
      `SUBSTRING(CAST(col AS VARCHAR), 1, 10) = 'YYYY-MM-DD'`
@@ -316,7 +326,7 @@ def solve(con):
     join_hints = []
     if is_medicine and is_revenue_or_sales:
       join_hints.append(
-          "- 💊 **Câu hỏi về thuốc/hoạt chất và bán hàng/doanh thu**: Bắt buộc JOIN bảng bán hàng (chi tiết hóa đơn / đơn hàng) với bảng thuốc (`ban_hang_thuoc` hoặc `du_lieu_xuat_danh_sach_thuoc`) qua mã hàng / mã thuốc (`ma_hang = ma_hh` hoặc qua `ma_sku`/`ten_san_pham`) để lọc `hoat_chat` hoặc `ke_don`."
+          "- 💊 **Câu hỏi về thuốc/hoạt chất và bán hàng/doanh thu**: Bắt buộc JOIN bảng bán hàng (chi tiết hóa đơn / đơn hàng) với bảng thuốc (`ban_hang_thuoc` hoặc `du_lieu_xuat_danh_sach_thuoc`) qua mã hàng / mã thuốc (`ma_hang = ma_hh` hoặc qua `ma_sku`/`ten_san_pham`) để lọc `hoat_chat` hoặc `ke_don`. LƯU Ý: Lọc hoạt chất cụ thể bằng so sánh bằng chính xác `LOWER(TRIM(hoat_chat)) = 'tên_hoạt_chat'` (KHÔNG dùng LIKE để tránh dính thuốc phối hợp). Loại trừ đơn hủy, trả, và 'không giao được'."
       )
     if is_import and any(w in q_low for w in ['mì', 'omachi', 'sản phẩm', 'bình quân', 'mặt hàng', 'gia']):
       join_hints.append(
