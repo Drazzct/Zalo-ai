@@ -52,7 +52,7 @@ def extract_python_code(text: str) -> str:
   if 'def solve' in text:
     return text.strip()
 
-  return text.strip()
+  return ''
 
 
 def extract_reasoning(text: str) -> str:

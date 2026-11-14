@@ -50,6 +50,11 @@ QUY TẮC BẮT BUỘC:
       Khi đếm số lượng đơn hàng có tổng tiền/doanh thu thoả mãn điều kiện (ví dụ: có doanh thu từ X đồng trở lên), BẮT BUỘC dùng Subquery đếm bên ngoài:
       `SELECT COUNT(*) FROM (SELECT ma_don_hang FROM <bảng> WHERE ... GROUP BY ma_don_hang HAVING SUM(thanh_tien) >= X)`
       TUYỆT ĐỐI KHÔNG viết `SELECT COUNT(DISTINCT ma_don_hang) ... GROUP BY ma_don_hang HAVING ...` vì GROUP BY sẽ làm mỗi nhóm COUNT luôn chỉ bằng 1!
+    - Xử lý cột tiền/số lượng lưu dưới dạng VARCHAR có dấu phẩy:
+      Trong DuckDB, các cột chứa số tiền có thể được lưu là chuỗi (VARCHAR) và chứa dấu phân cách hàng nghìn (ví dụ: '227,262,100').
+      Khi tính SUM, BẮT BUỘC phải làm sạch chuỗi và ép kiểu sang số:
+      `SUM(CAST(REPLACE(CAST(col AS VARCHAR), ',', '') AS DOUBLE))`
+      TUYỆT ĐỐI KHÔNG gọi `SUM(col)` trực tiếp nếu cột là kiểu VARCHAR vì DuckDB sẽ báo lỗi `BinderException: No function matches 'sum(VARCHAR)'`!
 """
 
   @classmethod
@@ -180,20 +185,24 @@ QUY TẮC BẮT BUỘC:
     window = temporal_anchors.get('primary_window')
     if window and table_profiles:
       s_date, e_date = window
-      overlapping = []
+      has_overlap = []
+      no_date = []
       for c in candidates:
         p = table_profiles.get(c, {})
         min_d, max_d = p.get('min_date'), p.get('max_date')
         if min_d and max_d:
           # Check date overlap: query start <= table max AND query end >= table min
           if s_date <= max_d and e_date >= min_d:
-            overlapping.append((c, p.get('rows', 0)))
+            has_overlap.append((c, p.get('rows', 0)))
         else:
-          overlapping.append((c, p.get('rows', 0)))
+          no_date.append((c, p.get('rows', 0)))
 
-      if overlapping:
-        overlapping.sort(key=lambda x: x[1], reverse=True)
-        return overlapping[0][0]
+      if has_overlap:
+        has_overlap.sort(key=lambda x: x[1], reverse=True)
+        return has_overlap[0][0]
+      if no_date:
+        no_date.sort(key=lambda x: x[1], reverse=True)
+        return no_date[0][0]
 
     # Default to candidate with most rows
     if table_profiles:
@@ -348,12 +357,16 @@ Hãy viết hàm `solve(con)` bằng Python để trả lời câu hỏi trên:
     hint = ""
     if "does not exist" in error_message.lower():
       hint = "\nLƯU Ý ĐẶC BIỆT: Bảng hoặc cột trên không tồn tại trong database của shop! Vui lòng đọc kỹ danh sách bảng và cột thực tế trong phần CƠ SỞ DỮ LIỆU CỬA HÀNG ở trên để dùng đúng bảng có thật.\n"
+    elif "solve(con)" in error_message.lower():
+      hint = "\nLƯU Ý ĐẶC BIỆT: Mã nguồn của bạn chưa định nghĩa hàm `solve(con)` hoặc bị ngắt quãng giữa chừng! Hãy BẮT BUỘC viết khối mã Python ```python def solve(con): ... ``` hoàn chỉnh.\n"
+
+    displayed_code = previous_code.strip() if previous_code.strip() else "# (Chưa có mã nguồn hợp lệ nào được sinh ra)"
 
     reflection = f"""{original_prompt}
 
 ### MÃ BẠN ĐÃ VIẾT TRƯỚC ĐÓ:
 ```python
-{previous_code}
+{displayed_code}
 ```
 
 ### THÔNG BÁO LỖI KHI THỰC THI (SANDBOX ERROR):

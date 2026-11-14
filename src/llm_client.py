@@ -66,7 +66,6 @@ class OllamaClient(BaseLLMClient):
             'temperature': self.temperature,
             'num_predict': self.num_predict,
             'num_ctx': self.num_ctx,
-            'stop': ['```\n\n', '```\r\n\r\n'],
         },
     }
     data_bytes = json.dumps(payload).encode('utf-8')
@@ -81,7 +80,11 @@ class OllamaClient(BaseLLMClient):
       try:
         with urllib.request.urlopen(req, timeout=self.timeout) as response:
           res_data = json.loads(response.read().decode('utf-8'))
-          return res_data.get('response', '')
+          resp_text = res_data.get('response', '')
+          thinking = res_data.get('thinking', '')
+          if thinking and '<reasoning>' not in resp_text:
+            return f'<reasoning>\n{thinking.strip()}\n</reasoning>\n{resp_text.strip()}'
+          return resp_text
       except urllib.error.URLError as e:
         if attempt < max_attempts - 1:
           time.sleep(2)
