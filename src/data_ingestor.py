@@ -145,7 +145,7 @@ def parse_vietnamese_date(val: Any, default_year: Optional[int] = None) -> Optio
 class DataIngestor:
   """Loads and cleans business data into DuckDB."""
 
-  ORDER_GROUP_KEYS = ['ma_don_hang', 'ma_don', 'ma_hoa_don', 'so_hoa_don', 'ma_phieu']
+  ORDER_GROUP_KEYS = ['ma_don_hang', 'ma_don', 'ma_hoa_don', 'so_hoa_don', 'ma_phieu', 'ma_giao_dich', 'order_id']
   ORDER_METADATA_COLS = [
       'ngay_dat_hang', 'ngay_ban', 'ngay_dat', 'ngay_thang', 'ngay',
       'trang_thai_don_hang', 'trang_thai_don', 'trang_thai', 'ket_qua',
@@ -263,8 +263,13 @@ class DataIngestor:
 
     # Clean dates and numbers
     for col in clean_cols:
-      is_date_col = any(w in col for w in ['ngay', 'date', 'thoi_gian', 'han_dung', 'han_su_dung'])
-      is_num_col = any(w in col for w in ['gia', 'tien', 'so_luong', 'sl', 'don_gia', 'thanh_tien', 'ton', 'ti_le', 'he_so'])
+      # ID / Key columns should NEVER be parsed as numbers
+      is_id_col = any(w in col for w in ['ma_', '_id', 'ma_giao_dich', 'order_id', 'so_phieu', 'so_hoa_don', 'so_bill'])
+
+      is_date_col = any(w in col for w in ['ngay', 'date', 'thoi_gian', 'han_dung', 'han_su_dung']) and not is_id_col
+      is_num_col = any(w in col for w in ['don_gia', 'gia_ban', 'gia_von', 'thanh_tien', 'tien', 'so_luong', 'sl', 'ton', 'ti_le', 'he_so']) and not is_id_col
+      if not is_num_col and (col == 'gia' or col.startswith('gia_') or col.endswith('_gia')):
+        is_num_col = not is_id_col
 
       if is_date_col:
         df[col] = df[col].apply(lambda x: parse_vietnamese_date(x, default_year=inferred_year))
