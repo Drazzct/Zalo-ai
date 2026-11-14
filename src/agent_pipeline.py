@@ -207,13 +207,26 @@ class ReasoningPipeline:
           'elapsed_sec': exec_res['elapsed_sec'],
       })
 
-      if exec_res['success'] and isinstance(exec_res['result'], dict):
-        # Successfully returned answer dict
-        final_result = exec_res['result']
+      res_dict = exec_res['result']
+      is_error_unanswerable = False
+      if isinstance(res_dict, dict):
+        ans_type = res_dict.get('type')
+        reason_text = str(res_dict.get('reason', '') or res_dict.get('answer', '')).lower()
+        if ans_type in ('abstain', 'unanswerable') and any(
+            w in reason_text for w in ['lỗi', 'error', 'exception', 'traceback', 'binder error', 'parser error', 'does not have', 'not exist']
+        ):
+          is_error_unanswerable = True
+
+      if exec_res['success'] and isinstance(res_dict, dict) and not is_error_unanswerable:
+        # Successfully returned valid answer dict
+        final_result = res_dict
         break
       else:
         # Prepare reflection prompt for next attempt
-        err_msg = exec_res['error'] or 'Code did not return a valid dictionary.'
+        if is_error_unanswerable:
+          err_msg = res_dict.get('reason', 'Lỗi thực thi truy vấn SQL trong hàm solve.')
+        else:
+          err_msg = exec_res['error'] or 'Code did not return a valid dictionary.'
         current_prompt = PromptGenerator.generate_reflection_prompt(
             original_prompt=prompt, previous_code=code_str, error_message=err_msg
         )

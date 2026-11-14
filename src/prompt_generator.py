@@ -66,6 +66,8 @@ QUY TẮC BẮT BUỘC:
       Khi tính SUM, BẮT BUỘC phải làm sạch chuỗi và ép kiểu sang số:
       `SUM(CAST(REPLACE(CAST(col AS VARCHAR), ',', '') AS DOUBLE))`
       TUYỆT ĐỐI KHÔNG gọi `SUM(col)` trực tiếp nếu cột là kiểu VARCHAR vì DuckDB sẽ báo lỗi `BinderException: No function matches 'sum(VARCHAR)'`!
+    - TUYỆT ĐỐI KHÔNG dùng try...except để nuốt lỗi SQL:
+      Không bọc `try ... except Exception: return {"type": "unanswerable", "reason": ...}` để giấu lỗi truy vấn SQL! Hãy để code thực thi bình thường để nếu có nhầm tên cột/bảng, hệ thống sẽ tự động bắt được lỗi và phản hồi để bạn sửa đúng ngay lập tức.
 """
 
   @classmethod
@@ -326,7 +328,7 @@ def solve(con):
     join_hints = []
     if is_medicine and is_revenue_or_sales:
       join_hints.append(
-          "- 💊 **Câu hỏi về thuốc/hoạt chất và bán hàng/doanh thu**: Bắt buộc JOIN bảng bán hàng (chi tiết hóa đơn / đơn hàng) với bảng thuốc (`ban_hang_thuoc` hoặc `du_lieu_xuat_danh_sach_thuoc`) qua mã hàng / mã thuốc (`ma_hang = ma_hh` hoặc qua `ma_sku`/`ten_san_pham`) để lọc `hoat_chat` hoặc `ke_don`. LƯU Ý: Lọc hoạt chất cụ thể bằng so sánh bằng chính xác `LOWER(TRIM(hoat_chat)) = 'tên_hoạt_chat'` (KHÔNG dùng LIKE để tránh dính thuốc phối hợp). Loại trừ đơn hủy, trả, và 'không giao được'."
+          "- 💊 **Câu hỏi về thuốc/hoạt chất và bán hàng/doanh thu**: Bắt buộc JOIN bảng bán hàng (chi tiết hóa đơn / đơn hàng) với bảng thuốc (`ban_hang_thuoc` hoặc `du_lieu_xuat_danh_sach_thuoc`). LƯU Ý ĐẶC BIỆT KHI JOIN: Nếu bảng bán hàng có `ten_san_pham` mà bảng thuốc chỉ có `ma_sku` (như ở shop `biz_121`), BẮT BUỘC JOIN qua bảng sản phẩm trung gian (`danh_sach_san_pham`) bằng `ten_san_pham`, rồi mới JOIN sang bảng thuốc bằng `ma_sku`! Cột thuốc kê đơn là `thuoc_ke_don = TRUE` (hoặc `ke_don = TRUE`). Với hoạt chất cụ thể, so sánh bằng chính xác: `LOWER(TRIM(hoat_chat)) = 'tên_hoạt_chất'` (KHÔNG dùng LIKE để tránh dính thuốc phối hợp). Loại trừ đơn hủy, trả, và 'không giao được'."
       )
     if is_import and any(w in q_low for w in ['mì', 'omachi', 'sản phẩm', 'bình quân', 'mặt hàng', 'gia']):
       join_hints.append(
