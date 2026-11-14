@@ -17,7 +17,7 @@ def analyze():
                 it = json.loads(line)
                 q_map[it['id']] = it
 
-    log_files = sorted(glob.glob('result/logs/*.json'))
+    log_files = sorted(glob.glob('result/logs_qwen35/*.json')) or sorted(glob.glob('result/logs/*.json'))
     print(f"Total log files found: {len(log_files)}")
     print("=" * 80)
 
@@ -65,3 +65,4 @@ def analyze():
 
 if __name__ == '__main__':
     analyze()
+

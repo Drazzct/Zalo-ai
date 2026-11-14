@@ -32,45 +32,75 @@ def create_notebook():
 
     # Cell 1: Header
     nb["cells"].append(md("""# 🧠 DataMate: Qwen 3.5 9B with Step-by-Step Reasoning (Chain-of-Thought) & Code Logger
+*(Hỗ trợ chạy mượt mà trên cả **Google Colab (GPU T4 / A100)** và **Kaggle Notebooks (GPU T4 x 2 / P100)**)*
 
 Notebook này được thiết kế chuyên biệt để:
-1. **Chạy mô hình Qwen 3.5 9B** trên Google Colab GPU (Tesla T4 15GB VRAM) với Ollama tối ưu song song 4 luồng.
+1. **Chạy mô hình Qwen 3.5 9B** trên GPU (Tesla T4 / P100 / Dual T4) với Ollama tối ưu.
 2. **Kích hoạt cơ chế Suy luận Logic (Chain-of-Thought / Reasoning)**: Model bắt buộc suy luận qua thẻ `<reasoning> ... </reasoning>` trước khi sinh code Python `solve(con)`.
 3. **Thực thi Benchmark tự động**: Đánh giá trên tập dữ liệu SME của Zalo AI DataMate.
 4. **Log chi tiết toàn bộ Code & Suy luận (Code & Reasoning Inspector)**: Trực quan hóa từng câu hỏi gồm Reasoning, Code sinh ra, Kết quả Sandbox và So sánh Ground Truth (Pass/Fail).
+5. **Gộp toàn bộ log thành 1 file & Tải về máy**: Tự động đóng gói `all_logs.json`, `merged_logs.jsonl` và `logs_bundle.zip` (tải về qua Colab download hoặc Kaggle Output FileLink).
 
-> ⚠️ **LƯU Ý:** Hãy đảm bảo bạn đã chọn **Runtime -> Change runtime type -> Hardware accelerator: T4 GPU** trước khi bắt đầu!"""))
+---
+### ⚙️ HƯỚNG DẪN CẤU HÌNH MÔI TRƯỜNG:
+* **Trên Google Colab:** Vào **Runtime -> Change runtime type -> Hardware accelerator: T4 GPU** (hoặc A100).
+* **Trên Kaggle Notebooks:**
+  1. Ở thanh menu bên phải (**Notebook options** / **Settings**):
+     - **Accelerator:** Chọn **GPU T4 x 2** (hoặc **GPU P100**).
+     - **Internet:** BẮT BUỘC gạt sang **"Internet on"** (Kaggle yêu cầu xác thực SĐT để bật internet, cần thiết để tải mã nguồn và mô hình).
+  2. Bấm **Save Changes** và bắt đầu chạy tuần tự từng cell."""))
 
-    # Cell 2: GPU Check
-    nb["cells"].append(md("## 1. Kiểm tra Môi trường & GPU (Tesla T4)"))
-    nb["cells"].append(code("!nvidia-smi"))
+    # Cell 2: GPU Check & Environment Detection
+    nb["cells"].append(md("## 1. Kiểm tra Môi trường & GPU"))
+    nb["cells"].append(code("""import os, sys, urllib.request
+
+# 1. Tự động nhận diện môi trường chạy (Kaggle, Colab hay Local)
+if os.path.exists("/kaggle"):
+    ENV_NAME = "Kaggle Notebook"
+    print("🚀 Môi trường phát hiện: KAGGLE NOTEBOOK (/kaggle/working)")
+elif os.path.exists("/content"):
+    ENV_NAME = "Google Colab"
+    print("🚀 Môi trường phát hiện: GOOGLE COLAB (/content)")
+else:
+    ENV_NAME = "Local Machine"
+    print(f"🚀 Môi trường phát hiện: LOCAL ({os.getcwd()})")
+
+# 2. Kiểm tra kết nối Internet
+try:
+    urllib.request.urlopen("https://www.google.com", timeout=3)
+    print("🌐 Kết nối Internet: ĐÃ BẬT (OK)")
+except Exception:
+    if os.path.exists("/kaggle"):
+        print("⚠️ CẢNH BÁO KAGGLE: Bạn chưa bật Internet! Vào thanh công cụ bên phải -> Settings -> Bật 'Internet on'.")
+    else:
+        print("⚠️ CẢNH BÁO: Không có kết nối Internet.")
+
+# 3. Kiểm tra GPU
+!nvidia-smi"""))
 
     # Cell 3: Setup Codebase
-    nb["cells"].append(md("""## 2. Thiết lập Mã nguồn Dự án trên Colab (Tự động Clone / Pull từ GitHub)
-Tự động clone hoặc kéo code mới nhất từ repository `https://github.com/Drazzct/Zalo-ai.git`."""))
+    nb["cells"].append(md("""## 2. Thiết lập Mã nguồn Dự án (Tự động Clone / Pull từ GitHub)
+Tự động nhận diện môi trường (Colab/Kaggle/Local) để clone hoặc kéo code mới nhất từ repository `https://github.com/Drazzct/Zalo-ai.git`."""))
     nb["cells"].append(code("""import os
 
 REPO_URL = "https://github.com/Drazzct/Zalo-ai.git"
-TARGET_DIR = "/content/Zalo-ai"
 
-if os.path.exists("/content"):
-    # Đang chạy trên Google Colab
-    if not os.path.exists(TARGET_DIR):
-        print(f"📦 Đang clone mã nguồn mới nhất từ {REPO_URL}...")
-        !git clone {REPO_URL} {TARGET_DIR}
-    else:
-        print(f"🔄 Thư mục {TARGET_DIR} đã tồn tại, đang tự động đồng bộ (git pull) bản mới nhất từ GitHub...")
-        %cd {TARGET_DIR}
-        !git fetch origin main && git reset --hard origin/main
-    %cd {TARGET_DIR}
+if os.path.exists("/kaggle"):
+    TARGET_DIR = "/kaggle/working/Zalo-ai"
+elif os.path.exists("/content"):
+    TARGET_DIR = "/content/Zalo-ai"
 else:
-    # Đang chạy trên máy local
-    print(f"ℹ️ Đang chạy trên môi trường local: {os.getcwd()}")
-    try:
-        !git pull origin main
-    except Exception:
-        pass
+    TARGET_DIR = os.getcwd()
 
+if not os.path.exists(TARGET_DIR) or not os.path.exists(os.path.join(TARGET_DIR, ".git")):
+    print(f"📦 Đang clone mã nguồn mới nhất từ {REPO_URL} vào {TARGET_DIR}...")
+    !git clone {REPO_URL} {TARGET_DIR}
+else:
+    print(f"🔄 Thư mục {TARGET_DIR} đã tồn tại, đang tự động đồng bộ (git pull) bản mới nhất từ GitHub...")
+    %cd {TARGET_DIR}
+    !git fetch origin main && git reset --hard origin/main
+
+%cd {TARGET_DIR}
 print("✅ Thư mục làm việc hiện tại:", os.getcwd())
 !git log -1 --oneline"""))
 
@@ -79,14 +109,14 @@ print("✅ Thư mục làm việc hiện tại:", os.getcwd())
     nb["cells"].append(code("!pip install -q pandas duckdb openpyxl pydantic pytest requests openai tabulate"))
 
     # Cell 5: Setup Ollama
-    nb["cells"].append(md("""## 4. Cài đặt & Khởi động Ollama GPU (Tối ưu 4 luồng song song)
-Cấu hình `OLLAMA_NUM_PARALLEL=4` và `OLLAMA_FLASH_ATTENTION=1` để tận dụng 100% sức mạnh Tesla T4 GPU."""))
-    nb["cells"].append(code("""import subprocess, os, time, urllib.request
+    nb["cells"].append(md("""## 4. Cài đặt & Khởi động Ollama GPU
+Tự động cài đặt Ollama tương thích cả Colab và Kaggle, khởi động daemon ngầm và tải model `qwen3.5:9b`."""))
+    nb["cells"].append(code("""import subprocess, os, time, urllib.request, shutil
 
-# 1. Cài đặt công cụ giải nén zstd và Ollama
-if subprocess.run(["which", "ollama"], capture_output=True).returncode != 0:
-    print("📦 Đang cài đặt zstd...")
-    !sudo apt-get update && sudo apt-get install -y zstd
+# 1. Cài đặt công cụ giải nén zstd và Ollama (tương thích cả Colab và Kaggle root/sudo)
+if not shutil.which("ollama"):
+    print("📦 Đang kiểm tra công cụ zstd...")
+    !which zstd > /dev/null || (apt-get update -qq && apt-get install -y -qq zstd || sudo apt-get update -qq && sudo apt-get install -y -qq zstd)
     print("📦 Đang cài đặt Ollama...")
     !curl -fsSL https://ollama.com/install.sh | sh
 else:
@@ -94,8 +124,9 @@ else:
 
 # 2. Khởi chạy Ollama daemon với GPU
 env = os.environ.copy()
-env["CUDA_VISIBLE_DEVICES"] = "0"
-env["OLLAMA_NUM_PARALLEL"] = "4"
+# Trên Kaggle nếu có 2 GPU T4 thì hỗ trợ cả 2 GPU, Colab dùng GPU 0
+env["CUDA_VISIBLE_DEVICES"] = "0,1" if os.path.exists("/kaggle") else "0"
+env["OLLAMA_NUM_PARALLEL"] = "2"
 env["OLLAMA_FLASH_ATTENTION"] = "1"
 
 try:
@@ -105,8 +136,20 @@ except Exception:
     print("🚀 Đang khởi động Ollama daemon...")
     with open("ollama.log", "w") as f:
         subprocess.Popen(["ollama", "serve"], env=env, stdout=f, stderr=f)
-    time.sleep(5)
-    print("✅ Khởi động Ollama daemon thành công!")
+    # Chờ daemon sẵn sàng (tối đa 15s)
+    daemon_ready = False
+    for _ in range(15):
+        time.sleep(1)
+        try:
+            urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2)
+            daemon_ready = True
+            break
+        except Exception:
+            pass
+    if daemon_ready:
+        print("✅ Khởi động Ollama daemon thành công!")
+    else:
+        print("⚠️ Đang hoàn tất nạp daemon...")
 
 # 3. Tải model Qwen 3.5 9B (hoặc chuyển sang qwen2.5-coder:7b tùy chọn)
 MODEL_NAME = "qwen3.5:9b"
@@ -415,12 +458,26 @@ with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
         zipf.write(lf, arcname=f"individual_logs/{Path(lf).name}")
 print(f"✅ Đã đóng gói thành file ZIP: {zip_path} ({os.path.getsize(zip_path)/1024:.1f} KB)")
 
-# 5. Tự động tải về máy nếu đang chạy trên Google Colab
-try:
-    from google.colab import files
-    print("⬇️ Đang mở hộp thoại tải file all_logs.json về máy tính...")
-    files.download(merged_json_path)
-except Exception:
+# 5. Tự động hỗ trợ tải về máy trên cả Google Colab và Kaggle
+if os.path.exists("/content"):
+    # Google Colab
+    try:
+        from google.colab import files
+        print("⬇️ [Colab] Đang mở hộp thoại tải file all_logs.json về máy tính...")
+        files.download(merged_json_path)
+    except Exception as e:
+        print("ℹ️ Lỗi tải Colab:", e)
+elif os.path.exists("/kaggle"):
+    # Kaggle Notebook
+    try:
+        from IPython.display import FileLink, display
+        print("📁 [Kaggle] Các file kết quả đã sẵn sàng trong thư mục Output!")
+        print("🔗 Click vào link bên dưới để tải trực tiếp về máy tính:")
+        display(FileLink(zip_path))
+        display(FileLink(merged_json_path))
+    except Exception as e:
+        print("ℹ️ File đã lưu tại:", zip_path)
+else:
     print("ℹ️ Chạy trên môi trường local, bạn có thể xem trực tiếp file tại:", os.path.abspath(merged_json_path))"""))
 
     # Cell 12: Tips & Comparison
