@@ -114,13 +114,15 @@ class OpenAICompatibleClient(BaseLLMClient):
       base_url: str = 'http://127.0.0.1:8000/v1',
       api_key: str = 'token-dummy',
       temperature: float = 0.0,
-      timeout: float = 60.0,
+      timeout: float = 120.0,
+      max_tokens: int = 4096,
   ):
     self.model_name = model_name
     self.base_url = base_url.rstrip('/')
     self.api_key = api_key
     self.temperature = temperature
     self.timeout = timeout
+    self.max_tokens = max_tokens
 
   def generate(self, prompt: str) -> str:
     url = f'{self.base_url}/chat/completions'
@@ -128,8 +130,7 @@ class OpenAICompatibleClient(BaseLLMClient):
         'model': self.model_name,
         'messages': [{'role': 'user', 'content': prompt}],
         'temperature': self.temperature,
-        'max_tokens': 512,
-        'stop': ['```\n\n', '```\r\n\r\n'],
+        'max_tokens': self.max_tokens,
     }
     data_bytes = json.dumps(payload).encode('utf-8')
     req = urllib.request.Request(
@@ -144,7 +145,52 @@ class OpenAICompatibleClient(BaseLLMClient):
     try:
       with urllib.request.urlopen(req, timeout=self.timeout) as response:
         res_data = json.loads(response.read().decode('utf-8'))
-        return res_data['choices'][0]['message']['content']
+        choice = res_data['choices'][0]['message']
+        content = choice.get('content', '')
+        # If reasoning content is present (DeepSeek-R1 / Qwen3.5-thinking style)
+        reasoning = choice.get('reasoning_content', '')
+        if reasoning and '<reasoning>' not in content:
+          return f'<reasoning>\n{reasoning.strip()}\n</reasoning>\n{content.strip()}'
+        return content
     except Exception as e:
       raise RuntimeError(f'OpenAI-compatible API generation error: {e}')
+
+
+class VLLMDirectClient(BaseLLMClient):
+  """Direct in-process vLLM client for offline Docker execution without server overhead."""
+
+  def __init__(
+      self,
+      model_path: str,
+      tensor_parallel_size: int = 1,
+      gpu_memory_utilization: float = 0.85,
+      max_tokens: int = 4096,
+  ):
+    try:
+      from vllm import LLM, SamplingParams
+    except ImportError as exc:
+      raise ImportError(
+          'vllm is not installed. Use OllamaClient or OpenAICompatibleClient, or install vllm.'
+      ) from exc
+
+    self.sampling_params = SamplingParams(
+        temperature=0.0,
+        max_tokens=max_tokens,
+    )
+    print(
+        f'[VLLMDirectClient] Initializing vLLM with model={model_path}, tp={tensor_parallel_size}...'
+    )
+    self.llm = LLM(
+        model=model_path,
+        tensor_parallel_size=tensor_parallel_size,
+        gpu_memory_utilization=gpu_memory_utilization,
+        trust_remote_code=True,
+    )
+
+  def generate(self, prompt: str) -> str:
+    outputs = self.llm.generate([prompt], self.sampling_params, use_tqdm=False)
+    if outputs and outputs[0].outputs:
+      return outputs[0].outputs[0].text
+    return ''
+
 

@@ -264,8 +264,29 @@ class ReasoningPipeline:
       return
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / f'{qid}.json'
+
+    # Extract required fields for official Docker guideline Section 3.3
+    thinking = None
+    code = None
+    output = None
+    if isinstance(trace, list) and trace:
+      last_tr = trace[-1]
+      thinking = last_tr.get('reasoning') or None
+      code = last_tr.get('code') or None
+      output = last_tr.get('exec_result')
+    elif isinstance(trace, str):
+      thinking = trace
+
+    elapsed_ms = max(0, int(round(elapsed * 1000)))
+
     log_data = {
         'id': qid,
+        'answer': final_answer,
+        'elapsed_ms': elapsed_ms,
+        'thinking': thinking,
+        'code': code,
+        'output': output,
+        # Backward compatibility fields
         'final_answer': final_answer,
         'elapsed_seconds': round(elapsed, 4),
         'trace': trace,

@@ -1,0 +1,14 @@
+{
+  "training_performed": false,
+  "data_generation_performed": false,
+  "base_models": [
+    {
+      "name": "Qwen2.5-Coder-7B-Instruct",
+      "source_url": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct",
+      "release_date": "2024-09",
+      "license": "Apache-2.0",
+      "parameters": "7.61B"
+    }
+  ],
+  "local_artifacts": []
+}

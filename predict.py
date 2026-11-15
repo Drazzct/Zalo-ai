@@ -7,13 +7,15 @@ along with per-question logs to --log-dir (default: /result/logs).
 """
 
 import argparse
+import concurrent.futures
 import json
 import os
 from pathlib import Path
 import sys
+import threading
 import time
 
-# Ensure UTF-8 output on Windows
+# Ensure UTF-8 output on Windows / Linux
 if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
   sys.stdout.reconfigure(encoding='utf-8')
 if sys.stderr and hasattr(sys.stderr, 'reconfigure'):
@@ -39,20 +41,19 @@ def main():
   parser.add_argument(
       '--input-dir',
       type=str,
-      default=os.environ.get('DATA_DIR', 'public_test'),
-      help='Path to input split folder containing questions.jsonl, rulebook.md,'
-      ' calendar.csv, data/',
+      default=os.environ.get('DATA_DIR', '/data' if Path('/data').exists() else 'public_test'),
+      help='Path to input split folder containing questions.jsonl, rulebook.md, calendar.csv, data/',
   )
   parser.add_argument(
       '--output',
       type=str,
-      default=os.environ.get('OUTPUT_FILE', 'submission.jsonl'),
+      default=os.environ.get('OUTPUT_FILE', '/result/submission.jsonl' if Path('/result').exists() else 'submission.jsonl'),
       help='Path to output submission.jsonl',
   )
   parser.add_argument(
       '--log-dir',
       type=str,
-      default=os.environ.get('LOG_DIR', 'result/logs'),
+      default=os.environ.get('LOG_DIR', '/result/logs' if Path('/result').exists() else 'result/logs'),
       help='Path to directory for per-question logs',
   )
   parser.add_argument(
@@ -64,21 +65,32 @@ def main():
   parser.add_argument(
       '--model-backend',
       type=str,
-      choices=['mock', 'ollama', 'vllm'],
-      default='ollama',
-      help='LLM backend to use for code generation (default: ollama)',
+      choices=['mock', 'ollama', 'vllm', 'direct_vllm'],
+      default=os.environ.get('MODEL_BACKEND', 'ollama'),
+      help='LLM backend to use for code generation (default: ollama, options: mock, ollama, vllm, direct_vllm)',
   )
   parser.add_argument(
       '--model-name',
       type=str,
-      default='qwen2.5-coder:7b',
-      help='Model name (e.g. qwen2.5-coder:7b, qwen2.5-coder:3b)',
+      default=os.environ.get('MODEL_NAME', 'qwen2.5-coder:7b'),
+      help='Model name (e.g. qwen2.5-coder:7b, qwen3.5:9b)',
   )
   parser.add_argument(
       '--api-url',
       type=str,
-      default='http://127.0.0.1:11434',
+      default=os.environ.get('API_URL', 'http://127.0.0.1:11434'),
       help='URL of Ollama or vLLM server',
+  )
+  parser.add_argument(
+      '--workers',
+      type=int,
+      default=int(os.environ.get('NUM_WORKERS', '2')),
+      help='Number of parallel worker threads (default: 2)',
+  )
+  parser.add_argument(
+      '--no-reasoning',
+      action='store_true',
+      help='Disable step-by-step reasoning in prompt',
   )
 
   args = parser.parse_args()
@@ -105,15 +117,21 @@ def main():
     llm_client = OllamaClient(model_name=args.model_name, host=args.api_url)
   elif args.model_backend == 'vllm':
     llm_client = OpenAICompatibleClient(model_name=args.model_name, base_url=args.api_url)
+  elif args.model_backend == 'direct_vllm':
+    from src.llm_client import VLLMDirectClient
+    tp = int(os.environ.get('TENSOR_PARALLEL_SIZE', '2' if os.environ.get('CUDA_VISIBLE_DEVICES', '').count(',') >= 1 else '1'))
+    llm_client = VLLMDirectClient(model_path=args.model_name, tensor_parallel_size=tp)
   else:
     llm_client = MockLLMClient()
 
+  enable_reasoning = not args.no_reasoning
   pipeline = ReasoningPipeline(
       rulebook_path=rb_file,
       calendar_path=cal_file,
       llm_client=llm_client,
       sandbox_timeout=10.0,
       max_retries=2,
+      enable_reasoning=enable_reasoning,
   )
 
   questions = load_jsonl(q_file)
@@ -126,20 +144,55 @@ def main():
   print(f'Total Questions  : {len(questions)}')
   print(f'Output File      : {out_path.resolve()}')
   print(f'Log Directory    : {log_path.resolve()}')
+  print(f'Backend          : {args.model_backend} ({args.model_name})')
+  print(f'Workers          : {args.workers}')
+  print(f'Reasoning Mode   : {enable_reasoning}')
   print('=' * 60)
 
   start_all = time.perf_counter()
-  with open(out_path, 'w', encoding='utf-8') as out_f:
-    for i, q in enumerate(questions):
+
+  if args.workers <= 1:
+    with open(out_path, 'w', encoding='utf-8') as out_f:
+      for i, q in enumerate(questions):
+        biz_id = q['business_id']
+        biz_dir = data_dir / biz_id
+
+        ans_obj = pipeline.solve_question(q, biz_dir, log_dir=log_path)
+        line = json.dumps(ans_obj, ensure_ascii=False)
+        out_f.write(line + '\n')
+        out_f.flush()
+
+        ans_prev = f"type={ans_obj.get('type')}, answer={ans_obj.get('answer', ans_obj.get('reason'))}"
+        print(f"[{i + 1}/{len(questions)}] {q['id']} ({biz_id}) -> {ans_prev}", flush=True)
+  else:
+    write_lock = threading.Lock()
+    # Initialize empty output file
+    with open(out_path, 'w', encoding='utf-8') as out_f:
+      pass
+
+    def _worker(item):
+      idx, q = item
       biz_id = q['business_id']
       biz_dir = data_dir / biz_id
+      try:
+        ans_obj = pipeline.solve_question(q, biz_dir, log_dir=log_path)
+      except Exception as exc:
+        ans_obj = {'id': q['id'], 'type': 'unanswerable', 'reason': f'Worker execution error: {exc}'}
 
-      ans_obj = pipeline.solve_question(q, biz_dir, log_dir=log_path)
+      # Immediately write to output file safely
       line = json.dumps(ans_obj, ensure_ascii=False)
-      out_f.write(line + '\n')
+      with write_lock:
+        with open(out_path, 'a', encoding='utf-8') as out_f:
+          out_f.write(line + '\n')
+          out_f.flush()
 
-      if (i + 1) % 50 == 0 or (i + 1) == len(questions):
-        print(f'Processed [{i + 1}/{len(questions)}] questions...')
+      ans_prev = f"type={ans_obj.get('type')}, answer={ans_obj.get('answer', ans_obj.get('reason'))}"
+      print(f"[{idx + 1}/{len(questions)}] {q['id']} ({biz_id}) -> {ans_prev}", flush=True)
+      return idx, ans_obj
+
+    indexed = list(enumerate(questions))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
+      list(executor.map(_worker, indexed))
 
   total_sec = time.perf_counter() - start_all
   print('=' * 60)
@@ -150,4 +203,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-
