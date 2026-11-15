@@ -89,7 +89,7 @@ if ENV == "colab":
         drive.mount('/content/drive')
         OUTPUT_DIR = "/content/drive/MyDrive/zalo_datamate"
         os.makedirs(OUTPUT_DIR, exist_ok=True)
-        print(f"📁 Google Drive đã kết nối thành công! Kết quả sẽ tự động lưu an toàn tại:\n   -> {OUTPUT_DIR}")
+        print(f"📁 Google Drive đã kết nối thành công! Lưu an toàn tại: {OUTPUT_DIR}")
     except Exception as e:
         print("ℹ️ Chạy không mount Drive, lưu kết quả tại thư mục cục bộ result/:", e)
         OUTPUT_DIR = "result"
