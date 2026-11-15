@@ -74,13 +74,17 @@ QUY TẮC BẮT BUỘC:
   def detect_table_columns(
       cls, tbl: str, table_profiles: Optional[Dict[str, Any]]
   ) -> Dict[str, Optional[str]]:
-    """Detect primary date, money, status, and order_id columns for a table."""
+    """Detect primary date, money, status, order_id, product, and qty columns for a table."""
     cols_info = {
         'tbl': tbl,
         'date_col': None,
         'money_col': None,
         'status_col': None,
         'order_id_col': None,
+        'product_col': None,
+        'qty_col': None,
+        'unit_price_col': None,
+        'unit_col': None,
     }
     if not table_profiles or tbl not in table_profiles:
       return cols_info
@@ -110,12 +114,13 @@ QUY TẮC BẮT BUỘC:
     # 2. Money / Amount column
     for c in col_names:
       c_low = c.lower()
-      if any(
+      if c_low in ['tt', 'amount', 'tien'] or any(
           w in c_low
           for w in [
               'tong_tien_hang',
               'tong_tien',
               'thanh_tien',
+              'tong_phieu',
               'tri_gia',
               'can_tra_ncc',
               'so_tien',
@@ -134,15 +139,21 @@ QUY TẮC BẮT BUỘC:
       ):
         cols_info['status_col'] = c
         break
+    if not cols_info['status_col']:
+      for c in col_names:
+        if c.lower() in ['ghi_chu', 'note', 'trang_thai_xu_ly']:
+          cols_info['status_col'] = c
+          break
 
     # 4. Order ID column
     for c in col_names:
       c_low = c.lower()
-      if any(
+      if c_low in ['hd', 'so_hd', 'stt', 'ma_don', 'so_don'] or any(
           w in c_low
           for w in [
               'ma_hoa_don',
               'ma_don_hang',
+              'ma_don',
               'ma_nhap_hang',
               'so_phieu',
               'order_id',
@@ -151,6 +162,99 @@ QUY TẮC BẮT BUỘC:
           ]
       ):
         cols_info['order_id_col'] = c
+        break
+
+    # 5. Product name column
+    for c in col_names:
+      c_low = c.lower()
+      if any(
+          w in c_low
+          for w in [
+              'ma_',
+              'id',
+              'dat_hang',
+              'don_hang',
+              'nhap_hang',
+              'giao_hang',
+              'ban_hang',
+              'phieu',
+              'khach',
+          ]
+      ):
+        continue
+      if c_low in ['hang', 'san_pham', 'product'] or any(
+          w in c_low
+          for w in [
+              'ten_san_pham',
+              'ten_hang',
+              'hang_ban',
+              'hang_hoa',
+              'mat_hang',
+              'dien_giai',
+              'ten_thuoc',
+              'ten_mon',
+              'ten_dv',
+          ]
+      ):
+        cols_info['product_col'] = c
+        break
+
+    # 6. Quantity column
+    for c in col_names:
+      c_low = c.lower()
+      if c_low in ['sl', 'qty'] or any(
+          w in c_low
+          for w in [
+              'so_luong_san_pham',
+              'so_luong_giao',
+              'so_luong_ban',
+              'so_luong_nhap',
+              'so_luong',
+              'sl_ban',
+              'sl_nhap',
+              'sl_giao',
+              'sl_quy_doi',
+              'sl_thuc',
+              'quantity',
+          ]
+      ):
+        cols_info['qty_col'] = c
+        break
+
+    # 7. Unit price column
+    for c in col_names:
+      c_low = c.lower()
+      if c_low == 'dg' or any(
+          w in c_low
+          for w in [
+              'gia_1_dv',
+              'don_gia',
+              'gia_ban',
+              'gia_nhap',
+              'gia_san_pham',
+              'gia_cu',
+              'gia_moi',
+              'gia_von',
+          ]
+      ):
+        cols_info['unit_price_col'] = c
+        break
+
+    # 8. Unit column
+    for c in col_names:
+      c_low = c.lower()
+      if any(
+          w in c_low
+          for w in [
+              'dvt',
+              'don_vi_tinh',
+              'dv_goc',
+              'loai_dv',
+              'don_vi',
+              'unit',
+          ]
+      ):
+        cols_info['unit_col'] = c
         break
 
     return cols_info
@@ -337,6 +441,57 @@ def solve(con):
           "- 📦 **Câu hỏi về giá nhập sản phẩm cụ thể**: Hãy JOIN bảng chi tiết nhập hàng (`chi_tiet_nhap_hang`) với bảng sản phẩm (`danh_sach_san_pham`) qua `ma_hang` để lọc theo tên mặt hàng (`ten_hang`). Giá nhập bình quân một đơn vị = `ROUND(SUM(so_luong * don_gia) / SUM(so_luong))`."
       )
 
+    # Category / Group Query Hint
+    is_category = any(w in q_low for w in ['nhóm', 'nhom', 'loại', 'loai', 'ngành', 'nganh', 'danh mục', 'danh muc', 'chủng loại', 'đồ dùng', 'do dung', 'sữa', 'sua'])
+    if is_category and table_profiles and rec_tbl:
+      rec_cols = table_profiles.get(rec_tbl, {}).get('columns', {})
+      has_cat = any(any(k in c.lower() for k in ['nhom', 'loai', 'category', 'nganh']) for c in rec_cols)
+      if not has_cat:
+        for other_tbl, p in table_profiles.items():
+          if other_tbl == rec_tbl:
+            continue
+          other_cols = p.get('columns', {})
+          cat_col = next((c for c in other_cols if any(k in c.lower() for k in ['nhom', 'loai_hang', 'category', 'nganh'])), None)
+          if cat_col:
+            join_key = next((c for c in rec_cols if c in other_cols and any(k in c.lower() for k in ['hang', 'san_pham', 'sku', 'ma_'])), None)
+            if not join_key:
+              for r_c in rec_cols:
+                for o_c in other_cols:
+                  if r_c == o_c or (('hang' in r_c or 'san_pham' in r_c) and ('hang' in o_c or 'san_pham' in o_c)):
+                    join_key = (r_c, o_c)
+                    break
+                if join_key:
+                  break
+            if join_key:
+              if isinstance(join_key, tuple):
+                join_cond = f"{rec_tbl}.{join_key[0]} = {other_tbl}.{join_key[1]}"
+              else:
+                join_cond = f"{rec_tbl}.{join_key} = {other_tbl}.{join_key}"
+              join_hints.append(
+                  f"- 🏷️ **Câu hỏi về nhóm hàng / danh mục**: Bảng `{rec_tbl}` không có cột nhóm hàng. BẮT BUỘC JOIN `{rec_tbl}` với `{other_tbl}` qua điều kiện `{join_cond}` để lọc theo nhóm `{other_tbl}.{cat_col}` (Ví dụ: `WHERE LOWER({other_tbl}.{cat_col}) LIKE '%...%'`)."
+              )
+            break
+
+    # Pipe bundle conversion for dev_004 or pipe queries
+    if any(w in q_low for w in ['ống pvc', 'ong pvc', 'bình minh', 'binh minh']) or (cols_info and cols_info.get('tbl') == 'so_ban_hang'):
+      if any(w in q_low for w in ['cây', 'cay', 'ống', 'ong', 'bao nhiêu']):
+        join_hints.append(
+            "- 📏 **Quy đổi bó Ống PVC**: Các mặt hàng Ống PVC Bình Minh bán theo bó (1 bó = 10 cây). Khi tính số lượng cây, nếu dòng ghi đơn vị bó (`LOWER(dvt) LIKE '%bó%'` hoặc `dvt = 'bó'`), số cây = `sl_ban * 10`; nếu ghi `cây`, số cây = `sl_ban` (Dùng: `CASE WHEN LOWER(dvt) LIKE '%bó%' THEN sl_ban * 10 ELSE sl_ban END`)."
+        )
+
+    # Mother & Baby valid sales row filter
+    if cols_info and cols_info.get('tbl') in ['ban_hang_2025', 'ban_hang_2026']:
+      join_hints.append(
+          "- 🍼 **Lọc dòng hàng hợp lệ**: Trong bảng bán hàng, chỉ tính các dòng là hàng hóa thật (loại trừ các dòng chiết khấu / phụ thu: `WHERE ten_hang NOT IN ('Voucher', 'Phí ship') AND ten_hang NOT LIKE '%điểm%'`)."
+      )
+
+    # dev_002 beverage filter
+    if cols_info and 'ban_hang_t' in cols_info.get('tbl', ''):
+      if any(w in q_low for w in ['trà', 'tra', 'cà phê', 'ca phe', 'món', 'ly']):
+        join_hints.append(
+            "- ☕ **Nhóm đồ uống**: Để lọc theo nhóm (như nhóm trà, cà phê), lọc theo cột tên hàng: `WHERE LOWER(ten_san_pham) LIKE '%trà%'` (hoặc `LIKE '%tra%'`)."
+        )
+
     rec_str = ""
     if cols_info and cols_info.get('tbl'):
       items = [f"Bảng giao dịch/dữ liệu gợi ý: `{cols_info['tbl']}`"]
@@ -348,6 +503,14 @@ def solve(con):
         items.append(f"Cột trạng thái: `{cols_info['status_col']}`")
       if cols_info.get('order_id_col'):
         items.append(f"Cột mã đơn: `{cols_info['order_id_col']}`")
+      if cols_info.get('product_col'):
+        items.append(f"Cột tên hàng/sản phẩm: `{cols_info['product_col']}`")
+      if cols_info.get('qty_col'):
+        items.append(f"Cột số lượng: `{cols_info['qty_col']}`")
+      if cols_info.get('unit_price_col'):
+        items.append(f"Cột đơn giá: `{cols_info['unit_price_col']}`")
+      if cols_info.get('unit_col'):
+        items.append(f"Cột đơn vị tính: `{cols_info['unit_col']}`")
       rec_str = f"### GỢI Ý BẢNG VÀ CỘT PHÙ HỢP:\n- {' | '.join(items)}\n"
       if join_hints:
         rec_str += '\n'.join(join_hints) + '\n'

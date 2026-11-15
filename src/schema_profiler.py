@@ -20,6 +20,7 @@ class SchemaProfiler:
     self.biz_dir = biz_dir
     self.biz_id = biz_dir.name
     self.readme_text = self._read_readme()
+    self.conventions = self._extract_conventions()
     self.unit_conversions = self._extract_unit_conversions()
     self.table_profiles = self._profile_tables()
 
@@ -31,6 +32,26 @@ class SchemaProfiler:
       except Exception:
         pass
     return ''
+
+  def _extract_conventions(self) -> List[str]:
+    """Extract business conventions from README.md under '## Quy ước'."""
+    conventions = []
+    if not self.readme_text:
+      return conventions
+
+    capture = False
+    for line in self.readme_text.splitlines():
+      stripped = line.strip()
+      if stripped.startswith('##') and 'quy ước' in stripped.lower():
+        capture = True
+        continue
+      if capture:
+        if stripped.startswith('##') and not stripped.startswith('###'):
+          break
+        if stripped.startswith('-') or stripped.startswith('*'):
+          conventions.append(stripped.lstrip('-*').strip())
+
+    return conventions
 
   def _extract_unit_conversions(self) -> List[str]:
     """Extract unit conversion lines from README.md."""
@@ -148,6 +169,14 @@ class SchemaProfiler:
       lines.append('\n### QUY ĐỔI ĐƠN VỊ (README):')
       for conv in self.unit_conversions[:15]:
         lines.append(f'- {conv}')
+
+    if self.conventions:
+      # Filter out duplicate lines already present in unit_conversions
+      unique_convs = [c for c in self.conventions if c not in self.unit_conversions]
+      if unique_convs:
+        lines.append('\n### QUY ƯỚC NGHIỆP VỤ CỬA HÀNG (README):')
+        for conv in unique_convs[:15]:
+          lines.append(f'- {conv}')
 
     return '\n'.join(lines)
 

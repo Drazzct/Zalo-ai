@@ -43,7 +43,7 @@ def to_snake_case(name: str) -> str:
 
 
 def parse_clean_number(val: Any) -> Optional[float]:
-  """Clean string number with commas, dots, currency, percentage symbols."""
+  """Clean string number with commas, dots, currency, percentage, units, and shorthand (e.g. 90k, 5tr520, 1 ly)."""
   if val is None or (isinstance(val, float) and math.isnan(val)):
     return None
   if isinstance(val, (int, float)):
@@ -53,10 +53,40 @@ def parse_clean_number(val: Any) -> Optional[float]:
   if not s or s.lower() in ('none', 'null', 'nan', '-', ''):
     return None
 
-  # Remove currency and units
-  s = re.sub(r'[đĐkKmM%]', '', s).strip()
+  # Remove currency symbol
+  s = re.sub(r'[đĐ]', '', s).strip()
 
-  # Check comma/dot pattern: e.g. "560,000" or "1.500.000"
+  # 1. Shorthand million with remainder: e.g. 5tr520, 2tr150, 1tr5
+  tr_split = re.match(r'^([+-]?\d+)\s*(?:tr|trieu)\s*(\d+)$', s, re.IGNORECASE)
+  if tr_split:
+    main_val = int(tr_split.group(1))
+    dec_str = tr_split.group(2)
+    dec_val = float(f'0.{dec_str}') * 1_000_000
+    sign = 1 if main_val >= 0 else -1
+    return main_val * 1_000_000 + sign * dec_val
+
+  # 2. Shorthand million alone: e.g. 1,14tr, 2.76tr, 3tr
+  tr_match = re.match(r'^([+-]?\d+(?:[.,]\d+)?)\s*(?:tr|trieu)$', s, re.IGNORECASE)
+  if tr_match:
+    num = float(tr_match.group(1).replace(',', '.'))
+    return num * 1_000_000
+
+  # 3. Shorthand thousand: e.g. 90k, 18k, 70k, 100k
+  k_match = re.match(r'^([+-]?\d+(?:[.,]\d+)?)\s*k$', s, re.IGNORECASE)
+  if k_match:
+    num = float(k_match.group(1).replace(',', '.'))
+    return num * 1_000
+
+  # 4. Quantity with attached unit: e.g. '1 ly', '2 cuộn', '5 viên', '3 m3', '10 cây'
+  qty_unit_match = re.match(r'^([+-]?\d+(?:[.,]\d+)?)\s+[a-zA-Z\u00C0-\u024F\u1E00-\u1EFF0-9_]+$', s)
+  if qty_unit_match:
+    num_str = qty_unit_match.group(1).replace(',', '.')
+    try:
+      return float(num_str)
+    except ValueError:
+      pass
+
+  # 5. Check comma/dot pattern: e.g. "560,000" or "1.500.000" or "150.000đ"
   if ',' in s and '.' in s:
     if s.rfind(',') > s.rfind('.'):
       # European style: 1.500,50
@@ -75,6 +105,9 @@ def parse_clean_number(val: Any) -> Optional[float]:
     parts = s.split('.')
     if all(len(p) == 3 for p in parts[1:]):
       s = s.replace('.', '')
+
+  # Remove percentage symbol if left
+  s = s.replace('%', '').strip()
 
   try:
     return float(s)
@@ -264,10 +297,20 @@ class DataIngestor:
     # Clean dates and numbers
     for col in clean_cols:
       # ID / Key columns should NEVER be parsed as numbers
-      is_id_col = any(w in col for w in ['ma_', '_id', 'ma_giao_dich', 'order_id', 'so_phieu', 'so_hoa_don', 'so_bill'])
+      is_id_col = (
+          col in ['hd', 'so_hd', 'stt', 'ma_don', 'so_don', 'so_phieu', 'ma_phieu', 'order_id']
+          or any(w in col for w in ['ma_', '_id', 'ma_giao_dich', 'order_id', 'so_phieu', 'so_hoa_don', 'so_bill', 'stt'])
+      )
 
       is_date_col = any(w in col for w in ['ngay', 'date', 'thoi_gian', 'han_dung', 'han_su_dung']) and not is_id_col
-      is_num_col = any(w in col for w in ['don_gia', 'gia_ban', 'gia_von', 'thanh_tien', 'tien', 'so_luong', 'sl', 'ton', 'ti_le', 'he_so']) and not is_id_col
+      is_num_col = (
+          col in ['tt', 'dg', 'sl', 'tien', 'gia', 'amount', 'ton', 'dthu']
+          or any(w in col for w in [
+              'don_gia', 'gia_ban', 'gia_von', 'thanh_tien', 'so_luong', 'sl_', '_sl',
+              'tong_phieu', 'gia_1_dv', 'gia_nhap', 'gia_cu', 'gia_moi', 'so_tien', 'tri_gia',
+              'ton_cuoi', 'ton_kho', 'ti_le', 'he_so'
+          ])
+      ) and not is_id_col
       if not is_num_col and (col == 'gia' or col.startswith('gia_') or col.endswith('_gia')):
         is_num_col = not is_id_col
 
@@ -291,7 +334,7 @@ class DataIngestor:
 
   def load_excel_file(self, file_path: Path) -> List[Tuple[str, pd.DataFrame, Dict[str, str]]]:
     """Load an Excel file, grouping identical multi-sheet structures."""
-    wb = openpyxl.load_workbook(file_path, data_only=True)
+    wb = openpyxl.load_workbook(file_path, data_only=True, read_only=True)
     sheets_data = []
 
     for sheet in wb.sheetnames:
