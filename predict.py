@@ -72,8 +72,8 @@ def main():
   parser.add_argument(
       '--model-name',
       type=str,
-      default=os.environ.get('MODEL_NAME', 'qwen2.5-coder:7b'),
-      help='Model name (e.g. qwen2.5-coder:7b, qwen3.5:9b)',
+      default=os.environ.get('MODEL_NAME', 'qwen3.5:9b'),
+      help='Model name (e.g. qwen3.5:9b, qwen2.5-coder:7b)',
   )
   parser.add_argument(
       '--api-url',

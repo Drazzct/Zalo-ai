@@ -44,7 +44,7 @@ def build_unified_notebook():
 Notebook này được tối ưu chuyên biệt để:
 1. **Chạy toàn bộ 1,000 câu Public Test** trong **~25 - 35 phút** trên GPU T4 (nhanh gấp 15 lần).
 2. **Tự động lưu vào Google Drive & Hỗ trợ Resume**: Nếu mất mạng hoặc đứt kết nối giữa chừng, chỉ cần chạy lại là hệ thống tự động nhận diện và làm tiếp, không mất công chạy lại từ đầu!
-3. **Tránh tràn VRAM (Zero CPU Offloading)**: Khóa bộ đệm Context 4096 tokens, giúp 100% layers của mô hình `qwen2.5-coder:7b` nằm trọn trong VRAM.
+3. **Tránh tràn VRAM (Zero CPU Offloading)**: Khóa bộ đệm Context 4096 tokens, giúp 100% layers của mô hình `qwen3.5:9b` nằm trọn trong VRAM.
 4. **Pre-warming In-Memory DuckDB**: Nạp sẵn toàn bộ database các shop vào RAM DuckDB trước khi chạy, loại bỏ 100% độ trễ đọc file Excel lặp đi lặp lại.
 5. **Kiểm tra tự động trước khi Submit**: Chạy validator để đối soát đủ 1,000 câu, đúng 9 kiểu format theo chuẩn của BTC Zalo AI Challenge.
 6. **Gộp toàn bộ Log thành 1 file & Tải về máy**: Tự động tạo `all_logs.json`, `merged_logs.jsonl` và file nén `logs_bundle.zip`.
@@ -157,7 +157,7 @@ print("✅ Thư mục làm việc hiện tại:", os.getcwd())
   nb['cells'].append(
       md("""## 4. Cài đặt & Khởi động Ollama GPU Tối ưu (Tránh Tràn VRAM)
 Cấu hình `OLLAMA_CONTEXT_LENGTH=4096` và `OLLAMA_NUM_PARALLEL=4`:
-- Giúp 100% mô hình `qwen2.5-coder:7b` nằm trọn trong 15GB VRAM của T4.
+- Giúp 100% mô hình `qwen3.5:9b` nằm trọn trong 15GB VRAM của T4.
 - Không bị CPU offload, đạt tốc độ cực đại **35 - 45 tokens/s**!""")
   )
   nb['cells'].append(
@@ -175,7 +175,7 @@ else:
 # 2. Khởi chạy Ollama daemon với cấu hình GPU tối ưu
 env = os.environ.copy()
 env["CUDA_VISIBLE_DEVICES"] = "0,1" if os.path.exists("/kaggle") else "0"
-env["OLLAMA_NUM_PARALLEL"] = "4"          # 4 luồng song song
+env["OLLAMA_NUM_PARALLEL"] = "2"          # 2 luồng song song
 env["OLLAMA_FLASH_ATTENTION"] = "1"       # Kích hoạt Flash Attention
 env["OLLAMA_CONTEXT_LENGTH"] = "4096"     # Giới hạn context 4096 để 100% model ở trên GPU
 env["LLM_NUM_CTX"] = "4096"
@@ -201,8 +201,8 @@ except Exception:
     else:
         print("⚠️ Đang hoàn tất nạp daemon...")
 
-# 3. Tải model Qwen2.5-Coder 7B (Model 7B Q4 chỉ nặng 4.7GB, vừa vặn 100% trong VRAM T4 15GB)
-MODEL_NAME = "qwen2.5-coder:7b"
+# 3. Tải model Qwen 3.5 9B (Reasoning) (Model 9B Q4 nặng ~5.5GB, hỗ trợ suy luận logic qua thẻ <reasoning>)
+MODEL_NAME = "qwen3.5:9b"
 print(f"📦 Đang tải model {MODEL_NAME} về GPU...")
 !ollama pull {MODEL_NAME}
 
@@ -304,7 +304,7 @@ print("🚀 BẮT ĐẦU CHẠY SUY LUẬN 1,000 CÂU PUBLIC TEST")
 print(f"- Output Submission: {SUBMISSION_FILE}")
 print(f"- Logs Directory   : {LOGS_DIR}")
 print(f"- Backend / Model  : ollama ({MODEL_NAME})")
-print(f"- Workers          : 4 luồng song song")
+print(f"- Workers          : 2 luồng song song")
 print(f"- Resume Mode      : BẬT")
 print("=" * 60)
 
@@ -315,7 +315,7 @@ print("=" * 60)
   --log-dir {LOGS_DIR} \\
   --model-backend ollama \\
   --model-name {MODEL_NAME} \\
-  --workers 4 \\
+  --workers 2 \\
   --resume""")
   )
 
