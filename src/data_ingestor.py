@@ -351,7 +351,18 @@ class DataIngestor:
       if not data_rows:
         continue
 
-      df = pd.DataFrame(data_rows, columns=header)
+      # Normalize row lengths to match header length (for ragged read_only rows)
+      n_cols = len(header)
+      norm_rows = []
+      for r in data_rows:
+        r_list = list(r)
+        if len(r_list) < n_cols:
+          r_list.extend([None] * (n_cols - len(r_list)))
+        elif len(r_list) > n_cols:
+          r_list = r_list[:n_cols]
+        norm_rows.append(r_list)
+
+      df = pd.DataFrame(norm_rows, columns=header)
       # Drop completely empty rows
       df = df.dropna(how='all')
       if df.empty:

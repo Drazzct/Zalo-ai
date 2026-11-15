@@ -5,10 +5,12 @@ generates per-question execution logs, and computes official competition metrics
 """
 
 import argparse
+import concurrent.futures
 import json
 import os
 from pathlib import Path
 import sys
+import threading
 import time
 from typing import List, Optional
 
@@ -86,8 +88,8 @@ def main():
   parser.add_argument(
       '--model-name',
       type=str,
-      default='qwen2.5-coder:3b',
-      help='Model name (e.g. qwen2.5-coder:3b, qwen2.5-coder:7b)',
+      default='qwen3.5:9b',
+      help='Model name (default: qwen3.5:9b)',
   )
   parser.add_argument(
       '--api-url',
@@ -110,7 +112,18 @@ def main():
   parser.add_argument(
       '--reasoning',
       action='store_true',
-      help='Enable step-by-step reasoning in prompt before code generation',
+      default=True,
+      help='Enable step-by-step reasoning in prompt (default: True)',
+  )
+  parser.add_argument(
+      '--no-reasoning',
+      action='store_true',
+      help='Disable step-by-step reasoning in prompt',
+  )
+  parser.add_argument(
+      '--resume',
+      action='store_true',
+      help='Resume from existing output file (skip already answered questions)',
   )
 
   args = parser.parse_args()
@@ -119,6 +132,8 @@ def main():
   rb_file = split_path / 'rulebook.md'
   cal_file = split_path / 'calendar.csv'
   data_dir = split_path / 'data'
+  out_path = Path(args.output)
+  log_path = Path(args.log_dir)
 
   if not q_file.exists():
     raise FileNotFoundError(f'Questions file not found: {q_file}')
@@ -129,98 +144,119 @@ def main():
   if args.limit:
     questions = questions[: args.limit]
 
-  print('=' * 60)
-  print(f'DATAMATE BENCHMARK RUNNER - SPLIT: {args.split_dir}')
-  print(f'Total questions to process: {len(questions)}')
-  print('=' * 60)
-
-  # Initialize LLM client
-  if args.model_backend == 'mock':
-    llm_client = MockLLMClient()
-  elif args.model_backend == 'ollama':
-    llm_client = OllamaClient(model_name=args.model_name, host=args.api_url)
-  elif args.model_backend == 'vllm':
-    llm_client = OpenAICompatibleClient(model_name=args.model_name, base_url=args.api_url)
-  else:
-    llm_client = MockLLMClient()
-
-  # Initialize pipeline
-  pipeline = ReasoningPipeline(
-      rulebook_path=rb_file,
-      calendar_path=cal_file,
-      llm_client=llm_client,
-      sandbox_timeout=10.0,
-      max_retries=2,
-      enable_reasoning=args.reasoning,
-  )
-
-  out_path = Path(args.output)
-  log_path = Path(args.log_dir)
   out_path.parent.mkdir(parents=True, exist_ok=True)
   log_path.mkdir(parents=True, exist_ok=True)
 
-  results = []
-  start_all = time.perf_counter()
+  # Resume handling: skip already answered questions
+  completed_ids = set()
+  if args.resume and out_path.exists():
+    try:
+      existing = load_jsonl(out_path)
+      completed_ids = {r['id'] for r in existing if 'id' in r}
+      print(f'🔄 Resume enabled: found {len(completed_ids)} already answered questions in {out_path}')
+    except Exception as e:
+      print(f'Warning reading existing output for resume: {e}')
 
-  if args.workers <= 1:
-    with open(out_path, 'w', encoding='utf-8') as out_f:
-      for i, q in enumerate(questions):
+  total_original = len(questions)
+  if completed_ids:
+    questions = [q for q in questions if q['id'] not in completed_ids]
+    print(f'Remaining questions to process: {len(questions)} / {total_original}')
+
+  if not questions:
+    print('All questions have already been answered! Moving to evaluation.')
+  else:
+    # Initialize LLM client
+    if args.model_backend == 'mock':
+      llm_client = MockLLMClient()
+    elif args.model_backend == 'ollama':
+      llm_client = OllamaClient(model_name=args.model_name, host=args.api_url)
+    elif args.model_backend == 'vllm':
+      llm_client = OpenAICompatibleClient(model_name=args.model_name, base_url=args.api_url)
+    else:
+      llm_client = MockLLMClient()
+
+    enable_reasoning = not args.no_reasoning if args.no_reasoning else args.reasoning
+    # Initialize pipeline
+    pipeline = ReasoningPipeline(
+        rulebook_path=rb_file,
+        calendar_path=cal_file,
+        llm_client=llm_client,
+        sandbox_timeout=10.0,
+        max_retries=2,
+        enable_reasoning=enable_reasoning,
+    )
+
+    print('=' * 60)
+    print(f'DATAMATE BENCHMARK RUNNER - SPLIT: {args.split_dir}')
+    print(f'Questions to process: {len(questions)}')
+    print(f'Output File         : {out_path.resolve()}')
+    print(f'Backend             : {args.model_backend} ({args.model_name})')
+    print(f'Workers             : {args.workers}')
+    print(f'Reasoning Mode      : {enable_reasoning}')
+    print('=' * 60)
+
+    start_all = time.perf_counter()
+    open_mode = 'a' if (args.resume and out_path.exists()) else 'w'
+    if open_mode == 'w':
+      with open(out_path, 'w', encoding='utf-8') as out_f:
+        pass
+
+    if args.workers <= 1:
+      with open(out_path, 'a', encoding='utf-8') as out_f:
+        for i, q in enumerate(questions):
+          biz_id = q['business_id']
+          biz_dir = data_dir / biz_id
+
+          try:
+            ans_obj = pipeline.solve_question(q, biz_dir, log_dir=log_path)
+          except Exception as exc:
+            ans_obj = {'id': q['id'], 'type': 'unanswerable', 'reason': f'Execution error: {exc}'}
+
+          line = json.dumps(ans_obj, ensure_ascii=False)
+          out_f.write(line + '\n')
+          out_f.flush()
+
+          ans_preview = f"type={ans_obj.get('type')}, answer={ans_obj.get('answer', ans_obj.get('reason'))}"
+          print(f"[{i + 1}/{len(questions)}] {q['id']} ({biz_id}) -> {ans_preview}", flush=True)
+    else:
+      write_lock = threading.Lock()
+
+      def _worker(item):
+        idx, q = item
         biz_id = q['business_id']
         biz_dir = data_dir / biz_id
-
         try:
           ans_obj = pipeline.solve_question(q, biz_dir, log_dir=log_path)
         except Exception as exc:
-          ans_obj = {'id': q['id'], 'type': 'unanswerable', 'reason': f'Execution error: {exc}'}
-        # Ensure clean json line
+          ans_obj = {'id': q['id'], 'type': 'unanswerable', 'reason': f'Worker execution error: {exc}'}
+
         line = json.dumps(ans_obj, ensure_ascii=False)
-        out_f.write(line + '\n')
-        out_f.flush()
-        results.append(ans_obj)
+        with write_lock:
+          with open(out_path, 'a', encoding='utf-8') as out_f:
+            out_f.write(line + '\n')
+            out_f.flush()
 
-        ans_preview = f"type={ans_obj.get('type')}, answer={ans_obj.get('answer', ans_obj.get('reason'))}"
-        print(f"[{i + 1}/{len(questions)}] {q['id']} ({biz_id}) -> {ans_preview}", flush=True)
-  else:
-    import concurrent.futures
-    print(f"Running concurrent evaluation with {args.workers} workers...")
+        ans_prev = f"type={ans_obj.get('type')}, answer={ans_obj.get('answer', ans_obj.get('reason'))}"
+        print(f"[{idx + 1}/{len(questions)}] {q['id']} ({biz_id}) -> {ans_prev}", flush=True)
+        return idx, ans_obj
 
-    def _worker(item):
-      idx, q = item
-      b_id = q['business_id']
-      b_dir = data_dir / b_id
-      try:
-        ans = pipeline.solve_question(q, b_dir, log_dir=log_path)
-      except Exception as exc:
-        ans = {'id': q['id'], 'type': 'unanswerable', 'reason': f'Worker execution error: {exc}'}
-      ans_prev = f"type={ans.get('type')}, answer={ans.get('answer', ans.get('reason'))}"
-      print(f"[{idx + 1}/{len(questions)}] {q['id']} ({b_id}) -> {ans_prev}", flush=True)
-      return idx, ans
+      indexed = list(enumerate(questions))
+      with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
+        list(executor.map(_worker, indexed))
 
-    indexed = list(enumerate(questions))
-    ans_map = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
-      futures = {executor.submit(_worker, it): it[0] for it in indexed}
-      for fut in concurrent.futures.as_completed(futures):
-        idx, ans = fut.result()
-        ans_map[idx] = ans
-
-    results = [ans_map[i] for i in range(len(questions))]
-    with open(out_path, 'w', encoding='utf-8') as out_f:
-      for ans in results:
-        out_f.write(json.dumps(ans, ensure_ascii=False) + '\n')
-
-  elapsed_total = time.perf_counter() - start_all
-  print(
-      f'\nFinished processing {len(questions)} questions in'
-      f' {elapsed_total:.2f}s.'
-  )
-  print(f'Submission file written to: {out_path.resolve()}')
-  print(f'Execution logs written to : {log_path.resolve()}')
+    elapsed_total = time.perf_counter() - start_all
+    print(
+        f'\nFinished processing {len(questions)} questions in'
+        f' {elapsed_total:.2f}s.'
+    )
+    print(f'Submission file written to: {out_path.resolve()}')
+    print(f'Execution logs written to : {log_path.resolve()}')
 
   # Evaluation if ground truth is available
   ans_file = split_path / 'answers.jsonl'
   if args.evaluate and ans_file.exists():
     gt = load_jsonl(ans_file)
+    results = load_jsonl(out_path)
     processed_ids = {r['id'] for r in results}
     filtered_gt = [g for g in gt if g['id'] in processed_ids]
     eval_metrics = Evaluator.evaluate(results, filtered_gt)
@@ -233,6 +269,13 @@ def main():
     print(f"Abstain (0)     : {eval_metrics['abstain']}")
     print(f"TOTAL SCORE     : {eval_metrics['total_score']}")
     print(f"Accuracy        : {eval_metrics['accuracy']:.2f}%")
+    print('=' * 60)
+    print('Breakdown by Answer Type:')
+    for t, stats in eval_metrics['type_stats'].items():
+      print(
+          f"  - {t:<15}: Total={stats['total']:<4} | Correct={stats['correct']:<4}"
+          f" | Wrong={stats['wrong']:<4} | Abstain={stats['abstain']:<4}"
+      )
     print('=' * 60)
 
 
