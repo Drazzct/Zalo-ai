@@ -6,6 +6,7 @@ and Mock client for testing.
 
 from abc import ABC, abstractmethod
 import json
+import os
 import time
 from typing import Any, Dict, Optional
 import urllib.error
@@ -46,15 +47,15 @@ class OllamaClient(BaseLLMClient):
       host: str = 'http://127.0.0.1:11434',
       temperature: float = 0.0,
       timeout: float = 300.0,
-      num_ctx: int = 16384,
-      num_predict: int = 4096,
+      num_ctx: int = 4096,
+      num_predict: int = 2048,
   ):
     self.model_name = model_name
     self.host = host.rstrip('/')
     self.temperature = temperature
     self.timeout = timeout
-    self.num_ctx = num_ctx
-    self.num_predict = num_predict
+    self.num_ctx = int(os.environ.get('LLM_NUM_CTX', str(num_ctx)))
+    self.num_predict = int(os.environ.get('LLM_NUM_PREDICT', str(num_predict)))
 
   def generate(self, prompt: str) -> str:
     url = f'{self.host}/api/generate'

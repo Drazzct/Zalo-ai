@@ -65,9 +65,9 @@ def main():
   parser.add_argument(
       '--model-backend',
       type=str,
-      choices=['mock', 'ollama', 'vllm', 'direct_vllm'],
+      choices=['mock', 'ollama', 'vllm'],
       default=os.environ.get('MODEL_BACKEND', 'ollama'),
-      help='LLM backend to use for code generation (default: ollama, options: mock, ollama, vllm, direct_vllm)',
+      help='LLM backend to use for code generation (default: ollama)',
   )
   parser.add_argument(
       '--model-name',
@@ -91,6 +91,11 @@ def main():
       '--no-reasoning',
       action='store_true',
       help='Disable step-by-step reasoning in prompt',
+  )
+  parser.add_argument(
+      '--resume',
+      action='store_true',
+      help='Resume from existing submission file (skip already answered questions)',
   )
 
   args = parser.parse_args()
@@ -117,10 +122,6 @@ def main():
     llm_client = OllamaClient(model_name=args.model_name, host=args.api_url)
   elif args.model_backend == 'vllm':
     llm_client = OpenAICompatibleClient(model_name=args.model_name, base_url=args.api_url)
-  elif args.model_backend == 'direct_vllm':
-    from src.llm_client import VLLMDirectClient
-    tp = int(os.environ.get('TENSOR_PARALLEL_SIZE', '2' if os.environ.get('CUDA_VISIBLE_DEVICES', '').count(',') >= 1 else '1'))
-    llm_client = VLLMDirectClient(model_path=args.model_name, tensor_parallel_size=tp)
   else:
     llm_client = MockLLMClient()
 
@@ -138,6 +139,39 @@ def main():
   if args.limit:
     questions = questions[: args.limit]
 
+  answered_ids = set()
+  if args.resume and out_path.exists():
+    with open(out_path, 'r', encoding='utf-8') as f:
+      for line in f:
+        line_s = line.strip()
+        if line_s:
+          try:
+            it = json.loads(line_s)
+            if 'id' in it:
+              answered_ids.add(it['id'])
+          except Exception:
+            pass
+    if answered_ids:
+      print(f'⚡ RESUME MODE: Found {len(answered_ids)} answered questions in {out_path.name}.')
+      questions = [q for q in questions if q['id'] not in answered_ids]
+      print(f'Remaining questions to solve: {len(questions)}')
+
+  if not questions:
+    print('All questions have already been answered! Nothing to do.')
+    return
+
+  # Pre-warm business database caches into in-memory DuckDB
+  unique_biz = {q['business_id'] for q in questions}
+  print(f'Pre-warming DuckDB in-memory cache for {len(unique_biz)} businesses...')
+  for b_id in sorted(unique_biz):
+    b_dir = data_dir / b_id
+    if b_dir.exists():
+      try:
+        pipeline.get_or_ingest_biz(b_dir)
+      except Exception as e:
+        print(f'Warning: Could not pre-cache {b_id}: {e}')
+  print('✅ Business databases loaded into memory.')
+
   print('=' * 60)
   print('ZALO AI DATAMATE - PREDICTION RUNNER')
   print(f'Input Directory  : {input_path.resolve()}')
@@ -151,8 +185,13 @@ def main():
 
   start_all = time.perf_counter()
 
-  if args.workers <= 1:
+  open_mode = 'a' if (args.resume and out_path.exists()) else 'w'
+  if open_mode == 'w':
     with open(out_path, 'w', encoding='utf-8') as out_f:
+      pass
+
+  if args.workers <= 1:
+    with open(out_path, 'a', encoding='utf-8') as out_f:
       for i, q in enumerate(questions):
         biz_id = q['business_id']
         biz_dir = data_dir / biz_id
@@ -166,9 +205,6 @@ def main():
         print(f"[{i + 1}/{len(questions)}] {q['id']} ({biz_id}) -> {ans_prev}", flush=True)
   else:
     write_lock = threading.Lock()
-    # Initialize empty output file
-    with open(out_path, 'w', encoding='utf-8') as out_f:
-      pass
 
     def _worker(item):
       idx, q = item
