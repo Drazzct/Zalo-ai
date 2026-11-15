@@ -32,9 +32,14 @@ LLMClient = BaseLLMClient
 
 def extract_python_code(text: str) -> str:
   """Extract Python code block from markdown response."""
+  # Strip reasoning blocks before searching for code so prose doesn't get treated as code
+  cleaned_text = re.sub(r'<(?:reasoning|think)>.*?</(?:reasoning|think)>', '', text, flags=re.DOTALL | re.IGNORECASE)
+  if re.search(r'<(?:reasoning|think)>', cleaned_text, flags=re.IGNORECASE):
+    cleaned_text = re.sub(r'<(?:reasoning|think)>.*', '', cleaned_text, flags=re.DOTALL | re.IGNORECASE)
+
   # Look for ```python ... ```
   pattern = r'```(?:python)?\s*(.*?)\s*```'
-  matches = re.findall(pattern, text, flags=re.DOTALL)
+  matches = re.findall(pattern, cleaned_text, flags=re.DOTALL)
   if matches:
     # Prefer the longest block or the one containing 'def solve'
     for m in matches:
@@ -43,14 +48,14 @@ def extract_python_code(text: str) -> str:
     return matches[-1].strip()
 
   # Fallback: unclosed code block if response was truncated (```python ... EOF)
-  if '```python' in text:
-    unclosed = text.split('```python', 1)[1]
+  if '```python' in cleaned_text:
+    unclosed = cleaned_text.split('```python', 1)[1]
     if 'def solve' in unclosed:
       return unclosed.strip()
 
-  # If no markdown fences, check if raw code contains def solve
-  if 'def solve' in text:
-    return text.strip()
+  # If no markdown fences, check if cleaned text contains def solve
+  if 'def solve(con)' in cleaned_text or 'def solve(' in cleaned_text:
+    return cleaned_text.strip()
 
   return ''
 

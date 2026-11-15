@@ -230,8 +230,10 @@ QUY TẮC BẮT BUỘC:
     return candidates[0]
 
   @classmethod
-  def get_few_shot_examples(cls) -> str:
-    return """### VÍ DỤ MINH HỌA CẤU TRÚC TRUY VẤN:
+  def get_few_shot_examples(cls, target_table: str = None) -> str:
+    tbl = target_table if target_table else "ban_hang"
+    return f"""### VÍ DỤ MINH HỌA CẤU TRÚC TRUY VẤN:
+(LƯU Ý: BẮT BUỘC dùng đúng tên bảng thực tế trong phần "GỢI Ý BẢNG VÀ CỘT PHÙ HỢP" hoặc "CƠ SỞ DỮ LIỆU CỬA HÀNG" ở trên. TUYỆT ĐỐI KHÔNG tự bịa tên bảng!)
 
 Ví dụ 1: "Tổng doanh thu trong ngày hôm nay là bao nhiêu?" (as_of_date: 2025-04-30)
 ```python
@@ -239,7 +241,7 @@ def solve(con):
     # Đơn doanh thu: không huỷ, không trả, dùng SUBSTRING để bao quát cả TIMESTAMP
     query = \"\"\"
     SELECT COALESCE(SUM(thanh_tien), 0)
-    FROM don_hang
+    FROM {tbl}
     WHERE SUBSTRING(CAST(ngay_dat_hang AS VARCHAR), 1, 10) = '2025-04-30'
       AND LOWER(trang_thai) NOT LIKE '%hu%'
       AND LOWER(trang_thai) NOT LIKE '%hủy%'
@@ -249,10 +251,10 @@ def solve(con):
       AND LOWER(trang_thai) NOT LIKE '%trả%'
     \"\"\"
     res = con.execute(query).fetchone()[0]
-    return {
+    return {{
         "type": "number",
         "answer": int(round(res))
-    }
+    }}
 ```
 
 Ví dụ 2: "Tỉ lệ huỷ đơn tháng 6/2025 là bao nhiêu %?" (as_of_date: 2026-06-24)
@@ -268,19 +270,19 @@ def solve(con):
             LOWER(trang_thai) LIKE '%huỷ%' OR 
             LOWER(trang_thai) LIKE '%cancel%'
         ) THEN ma_don_hang END) AS cancelled_orders
-    FROM don_hang
+    FROM {tbl}
     WHERE SUBSTRING(CAST(ngay_dat_hang AS VARCHAR), 1, 10) >= '2025-06-01'
       AND SUBSTRING(CAST(ngay_dat_hang AS VARCHAR), 1, 10) <= '2025-06-30'
     \"\"\"
     row = con.execute(query).fetchone()
     total, cancelled = row[0], row[1]
     if total == 0:
-        return {"type": "unanswerable", "reason": "Không có đơn hàng nào trong tháng 6/2025"}
+        return {{"type": "unanswerable", "reason": "Không có đơn hàng nào trong tháng 6/2025"}}
     rate = round((cancelled / total) * 100, 2)
-    return {
+    return {{
         "type": "percent",
         "answer": rate
-    }
+    }}
 ```
 """
 
@@ -318,7 +320,7 @@ def solve(con):
         available_tables=available_tables,
     )
     cols_info = cls.detect_table_columns(rec_tbl, table_profiles) if rec_tbl else None
-    few_shots = cls.get_few_shot_examples()
+    few_shots = cls.get_few_shot_examples(target_table=cols_info.get('tbl') if cols_info else rec_tbl)
 
     q_low = question.lower()
     is_revenue_or_sales = any(w in q_low for w in ['doanh thu', 'bán được', 'ban duoc', 'bán', 'tiền', 'doanh so', 'dthu', 'đơn', 'don', 'chai'])
@@ -409,9 +411,13 @@ Hãy viết hàm `solve(con)` bằng Python để trả lời câu hỏi trên:
 
     displayed_code = previous_code.strip() if previous_code.strip() else "# (Chưa có mã nguồn hợp lệ nào được sinh ra)"
 
-    reflection = f"""{original_prompt}
+    base_prompt = original_prompt
+    if "### HƯỚNG DẪN SUY LUẬN TỪNG BƯỚC (REASONING PROCESS):" in base_prompt:
+      base_prompt = base_prompt.split("### HƯỚNG DẪN SUY LUẬN TỪNG BƯỚC (REASONING PROCESS):")[0].strip()
 
-### MÃ BẠN ĐÃ VIẾT TRƯỚC ĐÓ:
+    reflection = f"""{base_prompt}
+
+### MÃ BẠN ĐÃ VIẾT TRƯỚC ĐÓ (GẶP LỖI):
 ```python
 {displayed_code}
 ```
@@ -419,6 +425,8 @@ Hãy viết hàm `solve(con)` bằng Python để trả lời câu hỏi trên:
 ### THÔNG BÁO LỖI KHI THỰC THI (SANDBOX ERROR):
 {error_message}
 {hint}
-Hãy phân tích lỗi trên (ví dụ: sai tên cột/bảng, chia cho 0, query trả về rỗng, sai kiểu dữ liệu), BỎ QUA thẻ reasoning và viết lại hàm `solve(con)` hoàn chỉnh trong ```python ... ```:
+⚠️ YÊU CẦU ĐẶC BIỆT KHI SỬA LỖI (BẮT BUỘC):
+- TUYỆT ĐỐI BỎ QUA THẺ <reasoning>! KHÔNG sinh thẻ reasoning để tránh bị ngắt quãng token limit!
+- Viết NGAY LẬP TỨC khối mã Python `solve(con)` đã sửa lỗi trong ```python ... ```:
 """
     return reflection
