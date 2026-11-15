@@ -153,12 +153,12 @@ print("✅ Thư mục làm việc hiện tại:", os.getcwd())
       )
   )
 
-  # Cell 5: Setup Ollama GPU with 4096 context length (VRAM optimized)
+  # Cell 5: Setup Ollama GPU with 16384 context length (Full Context & Reasoning)
   nb['cells'].append(
-      md("""## 4. Cài đặt & Khởi động Ollama GPU Tối ưu (Tránh Tràn VRAM)
-Cấu hình `OLLAMA_CONTEXT_LENGTH=4096` và `OLLAMA_NUM_PARALLEL=4`:
-- Giúp 100% mô hình `qwen3.5:9b` nằm trọn trong 15GB VRAM của T4.
-- Không bị CPU offload, đạt tốc độ cực đại **35 - 45 tokens/s**!""")
+      md("""## 4. Cài đặt & Khởi động Ollama GPU Tối ưu
+Cấu hình `OLLAMA_CONTEXT_LENGTH=16384` và `OLLAMA_NUM_PARALLEL=2`:
+- Hỗ trợ toàn bộ schema và rulebook lớn của các shop (lên tới 16k tokens) mà không bị cắt cụt.
+- Đảm bảo 100% mô hình `qwen3.5:9b` nằm trọn trong VRAM 15GB của T4 mà không bị tràn.""")
   )
   nb['cells'].append(
       code("""import subprocess, os, time, urllib.request, shutil
@@ -172,13 +172,14 @@ if not shutil.which("ollama"):
 else:
     print("✅ Ollama đã được cài đặt sẵn.")
 
-# 2. Khởi chạy Ollama daemon với cấu hình GPU tối ưu
+# 2. Khởi chạy Ollama daemon với GPU
 env = os.environ.copy()
 env["CUDA_VISIBLE_DEVICES"] = "0,1" if os.path.exists("/kaggle") else "0"
-env["OLLAMA_NUM_PARALLEL"] = "2"          # 2 luồng song song
+env["OLLAMA_NUM_PARALLEL"] = "2"          # 2 luồng song song cho 9B
 env["OLLAMA_FLASH_ATTENTION"] = "1"       # Kích hoạt Flash Attention
-env["OLLAMA_CONTEXT_LENGTH"] = "4096"     # Giới hạn context 4096 để 100% model ở trên GPU
-env["LLM_NUM_CTX"] = "4096"
+env["OLLAMA_CONTEXT_LENGTH"] = "16384"    # Đảm bảo đủ context 16k cho prompt & reasoning
+env["LLM_NUM_CTX"] = "16384"
+env["LLM_NUM_PREDICT"] = "4096"
 
 try:
     urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2)

@@ -160,6 +160,9 @@ env = os.environ.copy()
 env["CUDA_VISIBLE_DEVICES"] = "0"
 env["OLLAMA_NUM_PARALLEL"] = "2"
 env["OLLAMA_FLASH_ATTENTION"] = "1"
+env["OLLAMA_CONTEXT_LENGTH"] = "16384"
+env["LLM_NUM_CTX"] = "16384"
+env["LLM_NUM_PREDICT"] = "4096"
 
 try:
     urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2)
@@ -176,11 +179,11 @@ MODEL_NAME = "qwen3.5:9b"
 print(f"📦 Đang tải và kiểm tra mô hình: {MODEL_NAME}...")
 !ollama pull {MODEL_NAME}
 
-# 4. Tùy chỉnh Modelfile tối ưu VRAM (Khóa Context 4096 tokens)
+# 4. Tùy chỉnh Modelfile (Context 16384 tokens cho toàn bộ Schema & Reasoning CoT)
 modelfile_content = f\"\"\"FROM {MODEL_NAME}
 PARAMETER temperature 0.0
-PARAMETER num_ctx 4096
-PARAMETER num_predict 1536
+PARAMETER num_ctx 16384
+PARAMETER num_predict 4096
 \"\"\"
 with open("Modelfile", "w") as f:
     f.write(modelfile_content)

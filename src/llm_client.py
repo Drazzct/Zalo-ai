@@ -47,8 +47,8 @@ class OllamaClient(BaseLLMClient):
       host: str = 'http://127.0.0.1:11434',
       temperature: float = 0.0,
       timeout: float = 300.0,
-      num_ctx: int = 4096,
-      num_predict: int = 2048,
+      num_ctx: int = 16384,
+      num_predict: int = 4096,
   ):
     self.model_name = model_name
     self.host = host.rstrip('/')
