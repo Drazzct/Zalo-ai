@@ -179,7 +179,8 @@ env["OLLAMA_NUM_PARALLEL"] = "2"          # 2 luồng song song cho 9B
 env["OLLAMA_FLASH_ATTENTION"] = "1"       # Kích hoạt Flash Attention
 env["OLLAMA_CONTEXT_LENGTH"] = "16384"    # Đảm bảo đủ context 16k cho prompt & reasoning
 env["LLM_NUM_CTX"] = "16384"
-env["LLM_NUM_PREDICT"] = "4096"
+env["LLM_NUM_PREDICT"] = "2048"
+env["LLM_TIMEOUT"] = "90.0"
 
 try:
     urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2)

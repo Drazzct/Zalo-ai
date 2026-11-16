@@ -171,7 +171,13 @@ class ReasoningPipeline:
         return final_answer
 
     # 3. Generate master prompt
-    schema_ctx = profiler.to_prompt_context()
+    rec_tbl = PromptGenerator.select_recommended_table(
+        question=q_text,
+        temporal_anchors=temporal_anchors,
+        table_profiles=profiler.table_profiles,
+        available_tables=list(profiler.table_profiles.keys()),
+    )
+    schema_ctx = profiler.to_prompt_context(focus_table=rec_tbl)
     rules_ctx = self.rulebook_parser.get_rule_summary_for_prompt(
         q_text, profiler.readme_text
     )
@@ -197,16 +203,35 @@ class ReasoningPipeline:
         code_str = extract_python_code(llm_response)
         reasoning_str = extract_reasoning(llm_response)
       except Exception as e:
+        err_msg = str(e)
         history_logs.append({
             'attempt': attempt + 1,
             'reasoning': '',
             'code': '',
             'exec_success': False,
             'exec_result': None,
-            'exec_error': f'LLM generation error: {e}',
+            'exec_error': f'LLM generation error: {err_msg}',
             'elapsed_sec': 0.0,
         })
-        break
+        if attempt < self.max_retries:
+          # Fast retry: remove reasoning guide and request Python code directly
+          fast_base = prompt
+          for marker in [
+              "### QUY TẮC BẮT BUỘC VỀ SUY LUẬN",
+              "### HƯỚNG DẪN SUY LUẬN TỪNG BƯỚC",
+          ]:
+            if marker in fast_base:
+              fast_base = fast_base.split(marker)[0].strip()
+
+          current_prompt = f"""{fast_base}
+
+⚠️ LƯU Ý KHẨN CẤP: Lần trước sinh mã bị lỗi hoặc quá thời gian ({err_msg})!
+- TUYỆT ĐỐI BỎ QUA THẺ <reasoning>! KHÔNG suy luận hay giải thích bất kỳ từ nào!
+- Viết TRỰC TIẾP và NGAY LẬP TỨC khối mã Python ```python def solve(con): ... ``` để phản hồi:
+"""
+          continue
+        else:
+          break
 
       exec_res = self.sandbox.execute_code(code_str, ingestor.con.cursor(), as_of_date=as_of)
       history_logs.append({

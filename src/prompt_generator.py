@@ -557,21 +557,19 @@ def solve(con):
 """
     if enable_reasoning:
       prompt += """
-### HƯỚNG DẪN SUY LUẬN TỪNG BƯỚC (REASONING PROCESS):
-Trước khi viết mã Python, hãy suy luận logic nghiệp vụ NGẮN GỌN bên trong thẻ <reasoning> ... </reasoning>:
-1. Phân tích câu hỏi: Cần tính chỉ số gì? Kiểu đáp án mong đợi là gì (number, percent, date, string...)?
-2. Mốc thời gian: as_of_date là bao nhiêu? Khoảng ngày [từ ngày ... đến ngày ...] là gì?
-3. Bảng và Cột: Chọn đúng bảng và cột có thật từ CƠ SỞ DỮ LIỆU CỬA HÀNG ở trên. Nếu cần thông tin thuộc tính (thuốc, sản phẩm), thực hiện JOIN chính xác qua khóa ngoại.
-4. Quy tắc nghiệp vụ & SQL: Lọc đơn hủy/trả, ép kiểu tiền DOUBLE nếu là VARCHAR.
-5. Xử lý ngoại lệ: Nếu bảng không có dữ liệu phù hợp hoặc kỳ hỏi nằm ngoài phạm vi, trả về unanswerable.
+### HƯỚNG DẪN SUY LUẬN TỪNG BƯỚC (<reasoning>):
+Chỉ được suy luận TỐI ĐA 2 ĐẾN 3 DÒNG GẠCH ĐẦU DÒNG (DƯỚI 40 TỪ) bên trong thẻ <reasoning> ... </reasoning>:
+- Chỉ số & Kiểu đáp án: (ví dụ: doanh thu, number)
+- Bảng & Khoảng ngày: (ví dụ: ban_hang_2025, từ YYYY-MM-DD đến YYYY-MM-DD)
+- Điều kiện lọc: (ví dụ: bỏ đơn huỷ/trả, giữ đơn hoàn thành hợp lệ)
 
-⚠️ NGUYÊN TẮC BẮT BUỘC VỀ SUY LUẬN ĐỂ TRÁNH TRUNCATION:
-- Suy luận SIÊU NGẮN GỌN (TỐI ĐA 3-5 DÒNG, DƯỚI 80 TỪ).
-- TUYỆT ĐỐI KHÔNG giải thích lan man, KHÔNG viết nháp code dài dòng trong thẻ reasoning.
-- ĐÓNG THẺ </reasoning> NGAY LẬP TỨC sau vài dòng chốt logic để dành token viết khối mã Python ```python ... ``` hoàn chỉnh!
-- Khối Python ```python ... ``` BẮT BUỘC nằm NGOÀI thẻ </reasoning>.
+⛔ LỆNH CẤM NGHIÊM NGẶT ĐỂ TRÁNH CẮT CỤT MÃ (TRUNCATION):
+1. TUYỆT ĐỐI KHÔNG viết nháp mã SQL hoặc code Python bên trong thẻ reasoning!
+2. TUYỆT ĐỐI KHÔNG phân tích giả định dài dòng!
+3. ĐÓNG THẺ </reasoning> NGAY LẬP TỨC sau 3 dòng gạch đầu dòng trên để dành token cho mã Python!
+4. Khối Python ```python def solve(con): ... ``` BẮT BUỘC viết hoàn chỉnh ngay sau thẻ </reasoning>.
 
-Sau khi kết thúc </reasoning>, viết khối mã Python duy nhất trong ```python ... ```:
+Viết thẻ <reasoning> ngắn gọn, sau đó viết hàm solve(con) trong ```python ... ```:
 """
     else:
       prompt += """
@@ -599,8 +597,12 @@ Hãy viết hàm `solve(con)` bằng Python để trả lời câu hỏi trên:
     displayed_code = previous_code.strip() if previous_code.strip() else "# (Chưa có mã nguồn hợp lệ nào được sinh ra)"
 
     base_prompt = original_prompt
-    if "### HƯỚNG DẪN SUY LUẬN TỪNG BƯỚC (REASONING PROCESS):" in base_prompt:
-      base_prompt = base_prompt.split("### HƯỚNG DẪN SUY LUẬN TỪNG BƯỚC (REASONING PROCESS):")[0].strip()
+    for marker in [
+        "### QUY TẮC BẮT BUỘC VỀ SUY LUẬN",
+        "### HƯỚNG DẪN SUY LUẬN TỪNG BƯỚC (REASONING PROCESS):",
+    ]:
+      if marker in base_prompt:
+        base_prompt = base_prompt.split(marker)[0].strip()
 
     reflection = f"""{base_prompt}
 

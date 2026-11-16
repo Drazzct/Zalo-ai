@@ -46,14 +46,14 @@ class OllamaClient(BaseLLMClient):
       model_name: str = 'qwen2.5-coder:7b',
       host: str = 'http://127.0.0.1:11434',
       temperature: float = 0.0,
-      timeout: float = 300.0,
+      timeout: float = 90.0,
       num_ctx: int = 16384,
-      num_predict: int = 4096,
+      num_predict: int = 2048,
   ):
     self.model_name = model_name
     self.host = host.rstrip('/')
     self.temperature = temperature
-    self.timeout = timeout
+    self.timeout = float(os.environ.get('LLM_TIMEOUT', str(timeout)))
     self.num_ctx = int(os.environ.get('LLM_NUM_CTX', str(num_ctx)))
     self.num_predict = int(os.environ.get('LLM_NUM_PREDICT', str(num_predict)))
 
@@ -86,7 +86,11 @@ class OllamaClient(BaseLLMClient):
           if thinking and '<reasoning>' not in resp_text:
             return f'<reasoning>\n{thinking.strip()}\n</reasoning>\n{resp_text.strip()}'
           return resp_text
-      except urllib.error.URLError as e:
+      except (TimeoutError, urllib.error.URLError) as e:
+        # Check if it was a socket timeout
+        is_timeout = isinstance(e, TimeoutError) or 'timed out' in str(e).lower()
+        if is_timeout:
+          raise TimeoutError(f'Ollama request timed out after {self.timeout}s: {e}')
         if attempt < max_attempts - 1:
           time.sleep(2)
           continue
@@ -94,11 +98,6 @@ class OllamaClient(BaseLLMClient):
             f'Could not connect to Ollama at {self.host}. Make sure "ollama serve"'
             f' is running: {e}'
         )
-      except TimeoutError as e:
-        if attempt < max_attempts - 1:
-          time.sleep(3)
-          continue
-        raise TimeoutError(f'Ollama request timed out after {self.timeout}s: {e}')
       except Exception as e:
         if attempt < max_attempts - 1:
           time.sleep(2)
@@ -115,15 +114,15 @@ class OpenAICompatibleClient(BaseLLMClient):
       base_url: str = 'http://127.0.0.1:8000/v1',
       api_key: str = 'token-dummy',
       temperature: float = 0.0,
-      timeout: float = 120.0,
-      max_tokens: int = 4096,
+      timeout: float = 90.0,
+      max_tokens: int = 2048,
   ):
     self.model_name = model_name
     self.base_url = base_url.rstrip('/')
     self.api_key = api_key
     self.temperature = temperature
-    self.timeout = timeout
-    self.max_tokens = max_tokens
+    self.timeout = float(os.environ.get('LLM_TIMEOUT', str(timeout)))
+    self.max_tokens = int(os.environ.get('LLM_NUM_PREDICT', str(max_tokens)))
 
   def generate(self, prompt: str) -> str:
     url = f'{self.base_url}/chat/completions'

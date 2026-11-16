@@ -148,22 +148,69 @@ class SchemaProfiler:
     max_d = max(max_dates) if max_dates else None
     return min_d, max_d
 
-  def to_prompt_context(self) -> str:
-    """Format schema and README into a concise LLM prompt string."""
+  def to_prompt_context(self, focus_table: Optional[str] = None) -> str:
+    """Format schema and README into a concise LLM prompt string.
+
+    If focus_table is specified and there are many tables (> 3), displays full
+    column details and samples for the focus table and lookup/dimension tables,
+    while non-relevant partition tables are rendered in a compact 1-line format.
+    """
     lines = [f'### CƠ SỞ DỮ LIỆU CỬA HÀNG: {self.biz_id}']
 
-    for tbl, p in self.table_profiles.items():
+    # Determine detailed vs compact tables
+    detailed_tables = set()
+    compact_tables = set()
+
+    if focus_table and len(self.table_profiles) > 3:
+      detailed_tables.add(focus_table)
+      for tbl, p in self.table_profiles.items():
+        if tbl == focus_table:
+          continue
+        # Dimension or lookup tables (no date range or small row count or master tables)
+        is_lookup = (
+            p['min_date'] is None
+            or p['rows'] < 2000
+            or any(w in tbl.lower() for w in ['danh_sach', 'thuoc', 'khach', 'san_pham', 'loai', 'ncc', 'ncc_'])
+        )
+        if is_lookup:
+          detailed_tables.add(tbl)
+        else:
+          compact_tables.add(tbl)
+    else:
+      detailed_tables = set(self.table_profiles.keys())
+
+    # 1. Output detailed tables
+    for tbl in self.table_profiles:
+      if tbl not in detailed_tables:
+        continue
+      p = self.table_profiles[tbl]
       date_str = (
           f' (Kỳ: {p["min_date"]} đến {p["max_date"]})'
           if p['min_date'] and p['max_date']
           else ''
       )
-      lines.append(f'\nBảng: `{tbl}` ({p["rows"]} dòng{date_str})')
+      prefix = 'Bảng chính: ' if focus_table and tbl == focus_table else 'Bảng: '
+      lines.append(f'\n{prefix}`{tbl}` ({p["rows"]} dòng{date_str})')
       lines.append('Cột:')
       for col, cinfo in p['columns'].items():
         sample_str = ', '.join([repr(s) for s in cinfo['samples']])
         sample_disp = f' [Ví dụ: {sample_str}]' if sample_str else ''
         lines.append(f"  - `{col}` ({cinfo['type']}){sample_disp}")
+
+    # 2. Output compact tables if any
+    if compact_tables:
+      lines.append('\nCác bảng dữ liệu kỳ khác (rút gọn):')
+      for tbl in self.table_profiles:
+        if tbl not in compact_tables:
+          continue
+        p = self.table_profiles[tbl]
+        date_str = (
+            f' (Kỳ: {p["min_date"]} đến {p["max_date"]})'
+            if p['min_date'] and p['max_date']
+            else ''
+        )
+        col_list = ', '.join([f'`{c}`' for c in p['columns'].keys()])
+        lines.append(f'- Bảng `{tbl}` ({p["rows"]} dòng{date_str}): {col_list}')
 
     if self.unit_conversions:
       lines.append('\n### QUY ĐỔI ĐƠN VỊ (README):')

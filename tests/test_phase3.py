@@ -213,6 +213,43 @@ def solve(con):
     assert ans['answer'] is True
     assert ref_client.call_count == 2
 
+  def test_timeout_fast_retry(self):
+    class TimeoutClient(MockLLMClient):
+
+      def __init__(self):
+        super().__init__()
+        self.call_count = 0
+        self.received_prompts = []
+
+      def generate(self, prompt: str) -> str:
+        self.call_count += 1
+        self.received_prompts.append(prompt)
+        if self.call_count == 1:
+          raise TimeoutError('Ollama request timed out after 90.0s')
+        else:
+          return """```python
+def solve(con):
+    return {"type": "boolean", "answer": True}
+```"""
+
+    client = TimeoutClient()
+    pipeline = ReasoningPipeline(
+        rulebook_path=Path('train/rulebook.md'),
+        calendar_path=Path('train/calendar.csv'),
+        llm_client=client,
+        max_retries=2,
+    )
+    q_obj = {
+        'id': 'q_test_timeout_retry',
+        'question': 'Cửa hàng có mở cửa không?',
+        'as_of_date': '2026-08-27',
+    }
+    ans = pipeline.solve_question(q_obj, Path('train/data/biz_101'))
+    assert ans['type'] == 'boolean'
+    assert ans['answer'] is True
+    assert client.call_count == 2
+    assert 'TUYỆT ĐỐI BỎ QUA THẺ <reasoning>' in client.received_prompts[1]
+
   def test_extract_reasoning_and_prompt(self):
     sample_llm_output = """<reasoning>
 1. Câu hỏi yêu cầu tính doanh thu ngày hôm nay (2026-08-27).

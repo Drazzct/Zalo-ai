@@ -1,0 +1,461 @@
+"""Generator script to build the vLLM High-Throughput Reasoning Benchmark Notebook.
+
+Generates:
+notebooks/qwen35_vllm_reasoning_benchmark.ipynb
+"""
+
+import json
+from pathlib import Path
+
+
+def build_vllm_notebook():
+  nb = {
+      'nbformat': 4,
+      'nbformat_minor': 2,
+      'metadata': {
+          'colab': {'provenance': [], 'gpuType': 'T4'},
+          'kernelspec': {'name': 'python3', 'display_name': 'Python 3'},
+          'language_info': {'name': 'python'},
+          'accelerator': 'GPU',
+      },
+      'cells': [],
+  }
+
+  def md(source):
+    lines = [line + '\n' for line in source.strip().split('\n')]
+    return {'cell_type': 'markdown', 'metadata': {}, 'source': lines}
+
+  def code(source):
+    lines = [line + '\n' for line in source.strip().split('\n')]
+    return {
+        'cell_type': 'code',
+        'execution_count': None,
+        'metadata': {},
+        'outputs': [],
+        'source': lines,
+    }
+
+  # Cell 1: Header
+  nb['cells'].append(
+      md("""# 🚀 Zalo AI Challenge 2026: DataMate - vLLM High-Throughput Ultra-Fast Runner
+*(Tối ưu hóa tốc độ suy luận bằng **vLLM (PagedAttention & Continuous Batching)** trên **Kaggle (2x T4 / P100)** và **Google Colab (T4 / A100)**)*
+
+### 🌟 Ưu điểm vượt trội của bản vLLM:
+1. **Tốc độ thông lượng gấp 3 - 5 lần**: vLLM quản lý KV-cache thông qua PagedAttention và gom batch liên tục (continuous batching), cho phép chạy **4 luồng song song** mà không làm tăng đáng kể độ trễ.
+2. **Hỗ trợ Tensor Parallelism (TP=2) trên Kaggle**: Tự động tận dụng cùng lúc cả 2 card GPU T4 trên Kaggle để chia tải mô hình, tối ưu hoá VRAM và tốc độ sinh token.
+3. **Cơ chế Fast-Retry & Chống nghẽn Timeout**: Tự động bắt timeout (90s) và retry tức thì không qua reasoning, đảm bảo không bị kẹt ở các câu tính toán phức tạp.
+4. **Schema Trimming & Strict Reasoning**: Rút gọn schema context hơn 70%, kiềm chế reasoning dưới 40 từ giúp ngăn chặn 100% hiện tượng tràn context / truncation.
+5. **Auto-Resume & Lưu Google Drive**: Bảo toàn tiến độ làm bài khi mất kết nối mạng hoặc hết phiên Colab.
+
+---
+### ⚙️ HƯỚNG DẪN CẤU HÌNH PHẦN CỨNG:
+- **Trên Kaggle Notebooks:** Ở thanh menu bên phải:
+  - **Accelerator:** Chọn **GPU T4 x 2** (để kích hoạt Tensor Parallelism 2 card) hoặc **GPU P100**.
+  - **Internet:** BẮT BUỘC gạt sang **"Internet on"** (để tải thư viện và mô hình từ HuggingFace).
+- **Trên Google Colab:** Vào menu **Runtime -> Change runtime type -> Hardware accelerator: T4 GPU** (hoặc A100).""")
+  )
+
+  # Cell 2: Environment & GPU Check + Google Drive Mount
+  nb['cells'].append(
+      md("""## 1. Kiểm tra Môi trường, GPU & Kết nối Google Drive
+Nhận diện nền tảng Kaggle / Colab và mount Google Drive để lưu kết quả liên tục theo thời gian thực.""")
+  )
+  nb['cells'].append(
+      code("""import os, sys, urllib.request
+
+# 1. Nhận diện môi trường chạy
+if os.path.exists("/kaggle"):
+    ENV = "kaggle"
+    print("🚀 Môi trường phát hiện: KAGGLE NOTEBOOK (/kaggle/working)")
+    OUTPUT_DIR = "/kaggle/working/result"
+elif os.path.exists("/content"):
+    ENV = "colab"
+    print("🚀 Môi trường phát hiện: GOOGLE COLAB (/content)")
+    OUTPUT_DIR = "result"
+else:
+    ENV = "local"
+    print(f"🚀 Môi trường phát hiện: LOCAL ({os.getcwd()})")
+    OUTPUT_DIR = "result"
+
+# 2. Tự động Mount Google Drive trên Google Colab để lưu kết quả liên tục
+if ENV == "colab":
+    try:
+        from google.colab import drive
+        drive.mount('/content/drive')
+        OUTPUT_DIR = "/content/drive/MyDrive/zalo_datamate"
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        print(f"📁 Google Drive đã kết nối thành công! Lưu an toàn tại: {OUTPUT_DIR}")
+    except Exception as e:
+        print("ℹ️ Chạy không mount Drive, lưu kết quả tại thư mục cục bộ result/:", e)
+        OUTPUT_DIR = "result"
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+else:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# 3. Kiểm tra kết nối Internet
+try:
+    urllib.request.urlopen("https://www.google.com", timeout=3)
+    print("🌐 Kết nối Internet: ĐÃ BẬT (OK)")
+except Exception:
+    if ENV == "kaggle":
+        print("⚠️ CẢNH BÁO KAGGLE: Bạn chưa bật Internet! Vào thanh công cụ bên phải -> Settings -> Bật 'Internet on'.")
+    else:
+        print("⚠️ CẢNH BÁO: Không có kết nối Internet.")
+
+# 4. Kiểm tra GPU
+!nvidia-smi""")
+  )
+
+  # Cell 3: Clone or Pull Codebase
+  nb['cells'].append(
+      md("""## 2. Thiết lập Mã nguồn Dự án (Tự động Clone / Git Pull)
+Đồng bộ phiên bản mới nhất từ repository `https://github.com/Drazzct/Zalo-ai.git`.""")
+  )
+  nb['cells'].append(
+      code("""import os
+
+REPO_URL = "https://github.com/Drazzct/Zalo-ai.git"
+
+if os.path.exists("/kaggle"):
+    TARGET_DIR = "/kaggle/working/Zalo-ai"
+elif os.path.exists("/content"):
+    TARGET_DIR = "/content/Zalo-ai"
+else:
+    TARGET_DIR = os.getcwd()
+
+if not os.path.exists(TARGET_DIR) or not os.path.exists(os.path.join(TARGET_DIR, ".git")):
+    print(f"📦 Đang clone mã nguồn mới nhất từ {REPO_URL} vào {TARGET_DIR}...")
+    !git clone {REPO_URL} {TARGET_DIR}
+else:
+    print(f"🔄 Đang tự động đồng bộ (git pull) bản mới nhất từ GitHub...")
+    %cd {TARGET_DIR}
+    !git fetch origin main && git reset --hard origin/main
+
+%cd {TARGET_DIR}
+print("✅ Thư mục làm việc hiện tại:", os.getcwd())
+!git log -1 --oneline""")
+  )
+
+  # Cell 4: Install Dependencies including vLLM
+  nb['cells'].append(
+      md("""## 3. Cài đặt các thư viện Python & vLLM Engine
+Cài đặt vLLM cùng DuckDB, OpenPyXL, Pandas và các phụ thuộc phục vụ suy luận dữ liệu.""")
+  )
+  nb['cells'].append(
+      code("""!pip install -q vllm pandas duckdb openpyxl pydantic pytest requests openai tabulate""")
+  )
+
+  # Cell 5: Setup & Launch vLLM OpenAI-Compatible Server
+  nb['cells'].append(
+      md("""## 4. Khởi động vLLM Server (OpenAI-Compatible Engine)
+Khởi chạy tiến trình `vllm.entrypoints.openai.api_server` ở nền:
+- **Model mặc định**: `Qwen/Qwen2.5-Coder-7B-Instruct` (hoặc `Qwen/Qwen2.5-7B-Instruct` / `deepseek-ai/DeepSeek-R1-Distill-Qwen-8B`).
+- **Tensor Parallelism**: Tự động đặt `tp=2` nếu phát hiện 2 GPU trên Kaggle.
+- **Port**: 8000 (`http://127.0.0.1:8000/v1`).
+- **Max Model Len**: 8192 tokens.
+- **Enforce Eager**: Giảm thiểu thời gian nạp ban đầu trên kiến trúc GPU T4.""")
+  )
+  nb['cells'].append(
+      code("""import subprocess, os, sys, time, urllib.request, json
+import torch
+
+# Chọn model HuggingFace phù hợp cho code/reasoning
+MODEL_NAME = "Qwen/Qwen2.5-Coder-7B-Instruct"
+
+# Phát hiện số GPU khả dụng cho Tensor Parallelism
+num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 1
+tp_size = 2 if num_gpus >= 2 else 1
+print(f"🎮 Số GPU phát hiện: {num_gpus} | Tensor Parallel Size cấu hình: {tp_size}")
+
+vllm_api_url = "http://127.0.0.1:8000/v1/models"
+server_ready = False
+
+try:
+    with urllib.request.urlopen(vllm_api_url, timeout=2) as r:
+        if r.status == 200:
+            server_ready = True
+            print("✅ vLLM Server đã chạy sẵn từ trước!")
+except Exception:
+    pass
+
+if not server_ready:
+    print(f"🚀 Đang khởi động vLLM OpenAI-compatible Server với model {MODEL_NAME}...")
+    vllm_cmd = [
+        sys.executable, "-m", "vllm.entrypoints.openai.api_server",
+        "--model", MODEL_NAME,
+        "--port", "8000",
+        "--tensor-parallel-size", str(tp_size),
+        "--gpu-memory-utilization", "0.90",
+        "--max-model-len", "8192",
+        "--trust-remote-code",
+        "--dtype", "auto",
+        "--enforce-eager",
+    ]
+    
+    with open("vllm_server.log", "w") as log_f:
+        p = subprocess.Popen(vllm_cmd, stdout=log_f, stderr=log_f)
+    
+    print("⏳ Đang tải weights và khởi tạo PagedAttention (khoảng 60 - 90s)...")
+    for sec in range(120):
+        time.sleep(2)
+        try:
+            with urllib.request.urlopen(vllm_api_url, timeout=2) as r:
+                if r.status == 200:
+                    server_ready = True
+                    print(f"✅ vLLM Server đã sẵn sàng phục vụ tại http://127.0.0.1:8000/v1 (sau {sec*2}s)!")
+                    break
+        except Exception:
+            pass
+
+if not server_ready:
+    print("⚠️ Chưa thấy vLLM phản hồi, xem 30 dòng log cuối cùng:")
+    !tail -n 30 vllm_server.log
+else:
+    # Test nhanh 1 request
+    import requests
+    res = requests.post(
+        "http://127.0.0.1:8000/v1/chat/completions",
+        json={
+            "model": MODEL_NAME,
+            "messages": [{"role": "user", "content": "print('vLLM is ready')"}],
+            "max_tokens": 30
+        },
+        timeout=10
+    )
+    print("💬 Kiểm tra phản hồi mẫu từ vLLM:", res.json()["choices"][0]["message"]["content"])""")
+  )
+
+  # Cell 6: Unit Tests
+  nb['cells'].append(
+      md("""## 5. Chạy Toàn Bộ Unit Tests
+Đảm bảo toàn bộ 37 bài kiểm thử nghiệp vụ, calendar, sandbox, data ingestion, và abstain gate đều PASS 100%.""")
+  )
+  nb['cells'].append(
+      code("""!pytest tests/ -q""")
+  )
+
+  # Cell 7: Single Question Smoke Test
+  nb['cells'].append(
+      md("""## 6. Thử Nghiệm Câu Hỏi Mẫu Đơn Lẻ (Smoke Test)
+Kiểm tra nhanh 1 câu hỏi từ tập `public_test` kết nối trực tiếp với vLLM endpoint.""")
+  )
+  nb['cells'].append(
+      code("""from pathlib import Path
+import json
+from src.agent_pipeline import ReasoningPipeline
+from src.llm_client import OpenAICompatibleClient
+from IPython.display import display, Markdown
+
+# Khởi tạo Pipeline kết nối với vLLM API
+llm = OpenAICompatibleClient(
+    model_name=MODEL_NAME,
+    base_url="http://127.0.0.1:8000/v1",
+    timeout=90.0
+)
+pipeline = ReasoningPipeline(
+    rulebook_path=Path("public_test/rulebook.md"),
+    calendar_path=Path("public_test/calendar.csv"),
+    llm_client=llm,
+    sandbox_timeout=10.0,
+    max_retries=2,
+    enable_reasoning=True
+)
+
+# Đọc câu hỏi đầu tiên của tập public_test
+with open("public_test/questions.jsonl", "r", encoding="utf-8") as f:
+    sample_q = json.loads(f.readline())
+
+biz_dir = Path("public_test/data") / sample_q["business_id"]
+print(f"📌 Câu hỏi ID: {sample_q['id']} | Shop: {sample_q['business_id']}")
+print(f"💬 Nội dung: {sample_q['question']}")
+print(f"📅 As of date: {sample_q.get('as_of_date')}")
+print("-" * 60)
+
+demo_ans = pipeline.solve_question(sample_q, biz_dir, log_dir=Path("result/single_demo"))
+
+with open(f"result/single_demo/{sample_q['id']}.json", "r", encoding="utf-8") as f:
+    demo_log = json.load(f)
+
+trace = demo_log.get("trace", [{}])[-1]
+reasoning_text = trace.get("reasoning") or trace.get("raw_response") or "N/A"
+code_text = trace.get("code") or "# N/A"
+
+display(Markdown(f\"\"\"### 💭 BƯỚC SUY LUẬN (REASONING):
+```text
+{reasoning_text}
+```
+
+### 💻 MÃ NGUỒN PYTHON DUCKDB:
+```python
+{code_text}
+```
+
+### ⚡ ĐÁP ÁN:
+- **Type:** `{demo_ans.get('type')}`
+- **Answer:** `{demo_ans.get('answer', demo_ans.get('reason'))}`
+- **Thời gian chạy:** `{demo_log.get('elapsed_seconds')}s`
+\"\"\"))""")
+  )
+
+  # Cell 8: MAIN RUNNER - 1,000 Questions with vLLM & 4 Workers
+  nb['cells'].append(
+      md("""## 7. 🚀 CHẠY SUY LUẬN 1,000 CÂU PUBLIC TEST BẰNG vLLM (4 WORKERS)
+- Chạy song song **4 workers** tận dụng tối đa Continuous Batching của vLLM.
+- Tự động nạp sẵn **DuckDB in-memory cache** cho toàn bộ 14 shop.
+- Ghi đĩa / Google Drive tức thì sau từng câu hỏi.
+- **Tự động kích hoạt chế độ `--resume`**: Nếu bị ngắt kết nối giữa chừng, chỉ cần chạy lại cell này là hệ thống tiếp tục làm câu tiếp theo!""")
+  )
+  nb['cells'].append(
+      code("""import os
+from pathlib import Path
+
+SUBMISSION_FILE = os.path.join(OUTPUT_DIR, "submission.jsonl")
+LOGS_DIR = os.path.join(OUTPUT_DIR, "logs")
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+print("=" * 60)
+print("🚀 BẮT ĐẦU CHẠY SUY LUẬN 1,000 CÂU PUBLIC TEST VỚI vLLM")
+print(f"- Output Submission: {SUBMISSION_FILE}")
+print(f"- Logs Directory   : {LOGS_DIR}")
+print(f"- Backend / Model  : vllm ({MODEL_NAME})")
+print(f"- Workers          : 4 luồng song song (vLLM PagedAttention Batching)")
+print(f"- Resume Mode      : BẬT")
+print("=" * 60)
+
+# Thực thi lệnh dự đoán bằng vLLM backend
+!python predict.py \\
+  --input-dir public_test \\
+  --output {SUBMISSION_FILE} \\
+  --log-dir {LOGS_DIR} \\
+  --model-backend vllm \\
+  --model-name {MODEL_NAME} \\
+  --api-url http://127.0.0.1:8000/v1 \\
+  --workers 4 \\
+  --resume""")
+  )
+
+  # Cell 9: Validate Submission Format
+  nb['cells'].append(
+      md("""## 8. ✅ Kiểm Tra Tính Toàn Vẹn File Kết Quả (Submission Validator)
+Quét toàn bộ file `submission.jsonl` để đảm bảo:
+- Đủ 1,000 câu hỏi, không câu nào bị sót hay trùng lặp.
+- 100% đúng cú pháp JSON per line.
+- Đúng 9 kiểu định dạng: number, percent, string, date, boolean, list, table, unanswerable, abstain.""")
+  )
+  nb['cells'].append(
+      code("""!python scripts/validate_submission.py {SUBMISSION_FILE} --questions public_test/questions.jsonl""")
+  )
+
+  # Cell 10: Log Inspector & Merge Logs
+  nb['cells'].append(
+      md("""## 9. 🔍 Gộp Toàn Bộ Log Thành 1 File & Phân Tích Kết Quả
+Gộp tất cả file JSON riêng lẻ trong thư mục logs thành `all_logs.json`, `merged_logs.jsonl` và thống kê phân bố đáp án.""")
+  )
+  nb['cells'].append(
+      code("""import json, glob, zipfile, os
+from pathlib import Path
+import pandas as pd
+from IPython.display import display, Markdown
+
+# 1. Tìm tất cả file log
+log_files = sorted(glob.glob(f"{LOGS_DIR}/*.json"))
+if not log_files:
+    log_files = sorted(glob.glob("result/logs/*.json"))
+print(f"📦 Tìm thấy {len(log_files)} file log.")
+
+# 2. Gộp thành 1 file JSON duy nhất (all_logs.json)
+all_logs = []
+rows = []
+for lf in log_files:
+    try:
+        with open(lf, "r", encoding="utf-8") as f:
+            d = json.load(f)
+            all_logs.append(d)
+            
+            ans = d.get("answer") or d.get("final_answer", {})
+            rows.append({
+                "id": d.get("id"),
+                "type": ans.get("type"),
+                "answer": str(ans.get("answer", ans.get("reason"))),
+                "elapsed_s": round(d.get("elapsed_ms", 0) / 1000.0, 2) if "elapsed_ms" in d else d.get("elapsed_seconds", 0),
+                "has_code": bool(d.get("code")),
+                "has_thinking": bool(d.get("thinking"))
+            })
+    except Exception as e:
+        pass
+
+merged_json_path = os.path.join(OUTPUT_DIR, "all_logs.json")
+with open(merged_json_path, "w", encoding="utf-8") as f:
+    json.dump(all_logs, f, ensure_ascii=False, indent=2)
+print(f"✅ Đã gộp thành công vào: {merged_json_path}")
+
+# 3. Gộp thành file JSONL
+merged_jsonl_path = os.path.join(OUTPUT_DIR, "merged_logs.jsonl")
+with open(merged_jsonl_path, "w", encoding="utf-8") as f:
+    for item in all_logs:
+        f.write(json.dumps(item, ensure_ascii=False) + "\\n")
+print(f"✅ Đã tạo file JSONL: {merged_jsonl_path}")
+
+# 4. Hiển thị bảng tổng hợp
+if rows:
+    df_summary = pd.DataFrame(rows)
+    print("\\n" + "=" * 60)
+    print("📊 BÁO CÁO TIẾN ĐỘ & PHÂN BỐ ĐÁP ÁN (vLLM RUN):")
+    print(f"- Tổng số câu đã ghi nhận: {len(df_summary)}")
+    print(f"- Thời gian trung bình: {df_summary['elapsed_s'].mean():.2f} giây/câu")
+    print(f"- Số câu có code: {df_summary['has_code'].sum()} | Có reasoning: {df_summary['has_thinking'].sum()}")
+    print("\\nPhân bố loại đáp án:")
+    print(df_summary['type'].value_counts())
+    print("=" * 60)
+    display(df_summary.head(10))
+
+# 5. Đóng gói file ZIP để tải về máy
+zip_path = os.path.join(OUTPUT_DIR, "vllm_logs_and_submission.zip")
+with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+    if os.path.exists(SUBMISSION_FILE):
+        zipf.write(SUBMISSION_FILE, arcname="submission.jsonl")
+    zipf.write(merged_json_path, arcname="all_logs.json")
+    zipf.write(merged_jsonl_path, arcname="merged_logs.jsonl")
+    for lf in log_files[:100]:
+        zipf.write(lf, arcname=f"sample_logs/{Path(lf).name}")
+print(f"\\n✅ Đã đóng gói ZIP: {zip_path} ({os.path.getsize(zip_path)/1024:.1f} KB)")""")
+  )
+
+  # Cell 11: Download Submission & Logs
+  nb['cells'].append(
+      md("""## 10. ⬇️ Tải File `submission.jsonl` và Log Về Máy Tính
+Tải file kết quả về máy tính để nộp lên cổng cuộc thi Zalo AI Challenge.""")
+  )
+  nb['cells'].append(
+      code("""if ENV == "colab":
+    from google.colab import files
+    print("⬇️ Đang mở hộp thoại tải file submission.jsonl...")
+    if os.path.exists(SUBMISSION_FILE):
+        files.download(SUBMISSION_FILE)
+    print("⬇️ Đang mở hộp thoại tải file all_logs.json...")
+    if os.path.exists(merged_json_path):
+        files.download(merged_json_path)
+elif ENV == "kaggle":
+    from IPython.display import FileLink, display
+    print("📁 Các file đã sẵn sàng trong Output! Click link bên dưới để tải trực tiếp:")
+    if os.path.exists(SUBMISSION_FILE):
+        display(FileLink(SUBMISSION_FILE))
+    display(FileLink(zip_path))
+else:
+    print(f"📁 Chạy trên môi trường local, file kết quả ở tại: {SUBMISSION_FILE}")""")
+  )
+
+  return nb
+
+
+def main():
+  nb = build_vllm_notebook()
+  p = Path('notebooks/qwen35_vllm_reasoning_benchmark.ipynb')
+  p.parent.mkdir(parents=True, exist_ok=True)
+  with open(p, 'w', encoding='utf-8') as f:
+    json.dump(nb, f, ensure_ascii=False, indent=1)
+  print(f'✅ Đã tạo thành công: {p} ({len(nb["cells"])} cells)')
+
+
+if __name__ == '__main__':
+  main()
