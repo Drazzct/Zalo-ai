@@ -95,7 +95,7 @@ class RulebookParser:
     """Build a concise, targeted prompt snippet of relevant rules for the question."""
     prompt_lines = [
         '### QUY TẮC KINH DOANH CHUẨN (RULEBOOK):',
-        '- Doanh thu: Chỉ tính đơn không huỷ và không trả hàng (đơn có trả một phần cũng bỏ cả đơn). Bằng tổng thành tiền các dòng (đã trừ chiết khấu dòng, KHÔNG trừ voucher đơn, KHÔNG gồm VAT/ship). Loại trừ cả đơn giao không thành công (không giao được, thất bại).',
+        '- Doanh thu: Chỉ tính đơn không huỷ và không trả hàng (đơn có trả một phần cũng bỏ cả đơn). Bằng tổng thành tiền các dòng (đã trừ chiết khấu dòng, KHÔNG trừ voucher đơn, KHÔNG gồm VAT/ship). Loại trừ cả đơn giao không thành công (không giao được, thất bại). Đơn có trạng thái "Đã hoàn thành" hoặc "Hoàn thành" là đơn THÀNH CÔNG hợp lệ (TUYỆT ĐỐI KHÔNG dùng NOT LIKE \'%hoàn%\' vì sẽ xoá mất đơn hoàn thành!).',
         '- Đơn bị huỷ vs Đơn trả: Đơn trả hàng KHÔNG phải đơn huỷ! Tỉ lệ huỷ đơn = (Số đơn huỷ / Tổng mọi đơn đặt trong kỳ) * 100. Tử số CHỈ tính đơn có trạng thái hủy (LOWER(trang_thai) LIKE \'%hủy%\' OR LIKE \'%huỷ%\' OR LIKE \'%cancel%\' OR LIKE \'%da huy%\'), TUYỆT ĐỐI KHÔNG cộng đơn \'trả\' hay \'hoàn\' vào tử số đơn hủy!',
         '- Bán chạy: Theo số lượng quy về đơn vị cơ bản.',
         '- Khách hàng: Shop có mã khách thì theo mã khách (khách lẻ bỏ qua). Shop không có mã thì theo tên.',

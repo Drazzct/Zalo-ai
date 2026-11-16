@@ -15,7 +15,7 @@ Nhiệm vụ của bạn là viết một hàm Python `solve(con)` nhận kết 
 
 QUY TẮC BẮT BUỘC:
 1. ĐÚNG CHUẨN KINH DOANH (Rulebook):
-   - Doanh thu: Chỉ tính các đơn không huỷ và không trả hàng (đơn có trả một phần cũng bỏ cả đơn). Bằng tổng thành tiền các dòng (đã trừ giảm giá dòng, không trừ voucher đơn, không gồm VAT/ship).
+   - Doanh thu: Chỉ tính các đơn không huỷ và không trả hàng (đơn có trả một phần cũng bỏ cả đơn). Bằng tổng thành tiền các dòng (đã trừ giảm giá dòng, không trừ voucher đơn, không gồm VAT/ship). Đơn có trạng thái 'Đã hoàn thành' hoặc 'Hoàn thành' là đơn THÀNH CÔNG hợp lệ, TUYỆT ĐỐI KHÔNG loại bỏ!
    - Tỉ lệ huỷ đơn: Bằng (số đơn bị huỷ / TỔNG MỌI ĐƠN ĐẶT TRONG KỲ bao gồm cả huỷ, trả, đang giao) * 100, làm tròn 2 chữ số thập phân.
    - Bán chạy nhất: Xếp theo số lượng quy về đơn vị cơ bản (bỏ đơn huỷ, trả).
    - Bằng nhau: Nếu bằng nhau ở tiêu chí câu hỏi, xếp theo mã tăng dần (hoặc tên tăng dần nếu không có mã).
@@ -34,14 +34,17 @@ QUY TẮC BẮT BUỘC:
    - Chỉ trả về duy nhất khối mã Python trong thẻ ```python ... ```.
    - Hàm `solve(con)` phải trả về một dictionary: `{"type": ..., "answer": ...}` (hoặc `{"type": "unanswerable", "reason": ...}`).
 4. QUY TẮC SQL CHUẨN XÁC CHO SME (RẤT QUAN TRỌNG):
+   - ⚠️ CẢNH BÁO TỬ HUYỆT 'HOÀN THÀNH' vs 'HOÀN TRẢ/HOÀN HÀNG':
+     Trong phần mềm bán hàng SME (KiotViet, Sapo, iPOS...), trạng thái đơn hàng thành công phổ biến nhất là 'Đã hoàn thành' hoặc 'Hoàn thành'.
+     TUYỆT ĐỐI KHÔNG BAO GIỜ viết `NOT LIKE '%hoàn%'` trần trụi! Viết `NOT LIKE '%hoàn%'` sẽ loại bỏ 100% các đơn 'Đã hoàn thành' hợp lệ, khiến doanh thu/sản lượng luôn ra 0!
+     Khi loại trừ đơn hoàn trả, BẮT BUỘC viết:
+     `AND LOWER(col) NOT LIKE '%hoàn trả%' AND LOWER(col) NOT LIKE '%hoàn hàng%' AND LOWER(col) NOT LIKE '%trả hàng%' AND (LOWER(col) NOT LIKE '%hoàn%' OR LOWER(col) LIKE '%hoàn thành%')`
+     Tương tự, TUYỆT ĐỐI KHÔNG dùng `NOT LIKE '%hu%'` (vì dính chữ 'chuyển' trong 'vận chuyển') và KHÔNG dùng `NOT LIKE '%tr%'` (vì dính 'trong ngày', 'trực tiếp')!
    - Xử lý Tiếng Việt có dấu trong SQL: Từ "hủy" chứa ký tự "ủ" KHÔNG khớp với "u" trong LIKE '%hu%'!
      Khi lọc đơn hủy, BẮT BUỘC kiểm tra cả dấu và không dấu:
      `(LOWER(col) LIKE '%hủy%' OR LOWER(col) LIKE '%huỷ%' OR LOWER(col) LIKE '%da huy%' OR LOWER(col) LIKE '%huy don%' OR LOWER(col) LIKE '%cancel%')`
-     Khi loại trừ hủy và trả:
-     `(LOWER(col) NOT LIKE '%hủy%' AND LOWER(col) NOT LIKE '%huỷ%' AND LOWER(col) NOT LIKE '%cancel%' AND LOWER(col) NOT LIKE '%trả%' AND LOWER(col) NOT LIKE '%hoàn trả%' AND LOWER(col) NOT LIKE '%da huy%' AND LOWER(col) NOT LIKE '%huy don%')`
-     TUYỆT ĐỐI KHÔNG dùng `NOT LIKE '%hu%'` trần trụi vì ký tự 'hu' nằm trong chữ 'vận chuyển' (c-h-u-y-ể-n) sẽ làm lọc mất các đơn hàng đang giao hợp lệ!
-      Ngoài huỷ và trả, nếu trạng thái đơn là 'không giao được', 'thất bại', 'that bai', BẮT BUỘC loại trừ khỏi doanh thu:
-      `AND LOWER(col) NOT LIKE '%không giao được%' AND LOWER(col) NOT LIKE '%that bai%' AND LOWER(col) NOT LIKE '%thất bại%'`
+     Khi tính Doanh thu / Sản lượng bán, MẪU LỌC ĐƠN HỢP LỆ CHUẨN:
+     `AND LOWER(col) NOT LIKE '%hủy%' AND LOWER(col) NOT LIKE '%huỷ%' AND LOWER(col) NOT LIKE '%cancel%' AND LOWER(col) NOT LIKE '%trả%' AND LOWER(col) NOT LIKE '%hoàn trả%' AND LOWER(col) NOT LIKE '%hoàn hàng%' AND (LOWER(col) NOT LIKE '%hoàn%' OR LOWER(col) LIKE '%hoàn thành%') AND LOWER(col) NOT LIKE '%không giao được%' AND LOWER(col) NOT LIKE '%that bai%' AND LOWER(col) NOT LIKE '%thất bại%'`
    - Lọc Thuốc và Hoạt chất (Nhà thuốc):
       Hoạt chất trong database có thể là đơn chất (ví dụ: 'Natri clorid') hoặc đa chất phối hợp nối bằng ' + ' (ví dụ: 'Natri clorid + Kali clorid + Natri citrat + Glucose').
       Khi câu hỏi hỏi về một hoạt chất cụ thể (ví dụ: "Thuốc có hoạt chất Natri clorid"), BẮT BUỘC so sánh bằng chính xác:
@@ -68,6 +71,23 @@ QUY TẮC BẮT BUỘC:
       TUYỆT ĐỐI KHÔNG gọi `SUM(col)` trực tiếp nếu cột là kiểu VARCHAR vì DuckDB sẽ báo lỗi `BinderException: No function matches 'sum(VARCHAR)'`!
     - TUYỆT ĐỐI KHÔNG dùng try...except để nuốt lỗi SQL:
       Không bọc `try ... except Exception: return {"type": "unanswerable", "reason": ...}` để giấu lỗi truy vấn SQL! Hãy để code thực thi bình thường để nếu có nhầm tên cột/bảng, hệ thống sẽ tự động bắt được lỗi và phản hồi để bạn sửa đúng ngay lập tức.
+5. THUẬT NGỮ & TỪ VIẾT TẮT THƯƠNG MẠI SME:
+   Người dùng có thể dùng từ viết tắt thông dụng của chủ shop / nhân viên:
+   - `dthu`, `dt`: doanh thu
+   - `sl`, `slg`: số lượng
+   - `dg`: đơn giá
+   - `sp`, `mh`, `hh`: sản phẩm, mặt hàng, hàng hoá
+   - `dvt`: đơn vị tính
+   - `ncc`: nhà cung cấp
+   - `kh`: khách hàng
+   - `nv`: nhân viên
+   - `hd`, `hđ`: hoá đơn, đơn hàng
+   - `pn`: phiếu nhập
+   - `hnay`, `hqua`: hôm nay, hôm qua
+   - `trc`, `truoc`: trước
+   - `thg`, `th`: tháng; `tuan`, `t`: tuần
+   - `k`, `ng` = nghìn (x 1,000); `tr` = triệu (x 1,000,000)
+   Hãy tự động hiểu đúng ý nghĩa nghiệp vụ của các từ viết tắt này khi phân tích câu hỏi.
 """
 
   @classmethod
@@ -342,17 +362,20 @@ QUY TẮC BẮT BUỘC:
 Ví dụ 1: "Tổng doanh thu trong ngày hôm nay là bao nhiêu?" (as_of_date: 2025-04-30)
 ```python
 def solve(con):
-    # Đơn doanh thu: không huỷ, không trả, dùng SUBSTRING để bao quát cả TIMESTAMP
+    # Đơn doanh thu: không huỷ, không trả, đơn hoàn thành hợp lệ, dùng SUBSTRING để bao quát cả TIMESTAMP
     query = \"\"\"
     SELECT COALESCE(SUM(thanh_tien), 0)
     FROM {tbl}
     WHERE SUBSTRING(CAST(ngay_dat_hang AS VARCHAR), 1, 10) = '2025-04-30'
-      AND LOWER(trang_thai) NOT LIKE '%hu%'
       AND LOWER(trang_thai) NOT LIKE '%hủy%'
       AND LOWER(trang_thai) NOT LIKE '%huỷ%'
       AND LOWER(trang_thai) NOT LIKE '%cancel%'
-      AND LOWER(trang_thai) NOT LIKE '%tr%'
       AND LOWER(trang_thai) NOT LIKE '%trả%'
+      AND LOWER(trang_thai) NOT LIKE '%hoàn trả%'
+      AND LOWER(trang_thai) NOT LIKE '%hoàn hàng%'
+      AND (LOWER(trang_thai) NOT LIKE '%hoàn%' OR LOWER(trang_thai) LIKE '%hoàn thành%')
+      AND LOWER(trang_thai) NOT LIKE '%không giao được%'
+      AND LOWER(trang_thai) NOT LIKE '%thất bại%'
     \"\"\"
     res = con.execute(query).fetchone()[0]
     return {{
@@ -369,10 +392,11 @@ def solve(con):
     SELECT 
         COUNT(DISTINCT ma_don_hang) AS total_orders,
         COUNT(DISTINCT CASE WHEN (
-            LOWER(trang_thai) LIKE '%hu%' OR 
             LOWER(trang_thai) LIKE '%hủy%' OR 
             LOWER(trang_thai) LIKE '%huỷ%' OR 
-            LOWER(trang_thai) LIKE '%cancel%'
+            LOWER(trang_thai) LIKE '%cancel%' OR
+            LOWER(trang_thai) LIKE '%da huy%' OR
+            LOWER(trang_thai) LIKE '%huy don%'
         ) THEN ma_don_hang END) AS cancelled_orders
     FROM {tbl}
     WHERE SUBSTRING(CAST(ngay_dat_hang AS VARCHAR), 1, 10) >= '2025-06-01'

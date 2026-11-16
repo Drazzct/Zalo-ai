@@ -61,6 +61,22 @@ class TestQueryNormalizer:
     )
     assert t4['primary_window'] == ('2025-06-01', '2025-06-30')
 
+    # 5. Standalone MM/YYYY (02/2026, 11/2025)
+    t5 = query_normalizer.extract_temporal_bounds('Doanh thu 02/2026 là bao nhiêu?', as_of)
+    assert t5['primary_window'] == ('2026-02-01', '2026-02-28')
+
+    # 6. Quarter Q/YYYY (q3/2026, quý 2 năm 2025)
+    t6 = query_normalizer.extract_temporal_bounds('Tổng số đơn trong q3/2026', as_of)
+    assert t6['primary_window'] == ('2026-07-01', '2026-09-30')
+
+    # 7. Tết Nguyên đán 2026
+    t7 = query_normalizer.extract_temporal_bounds('Dịp Tết Nguyên đán 2026 bán được bao nhiêu ly?', as_of)
+    assert t7['primary_window'] == ('2026-02-10', '2026-02-26')
+
+    # 8. N ngày gần đây (7 ngày qua)
+    t8 = query_normalizer.extract_temporal_bounds('Doanh thu trong 7 ngày qua là bao nhiêu?', as_of)
+    assert t8['primary_window'] == ('2026-08-21', '2026-08-27')
+
 
 class TestExecutionSandbox:
 
