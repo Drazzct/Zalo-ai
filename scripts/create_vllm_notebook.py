@@ -183,21 +183,31 @@ except Exception:
 
 if not server_ready:
     print(f"🚀 Đang khởi động vLLM Server với model {MODEL_NAME} (alias: {SERVED_MODEL_NAME})...")
+    
+    # Cấu hình biến môi trường tối ưu cho 2x T4 trên Kaggle
+    env = os.environ.copy()
+    env["VLLM_USE_V1"] = "0"               # Bắt buộc: Tắt V1 engine để tránh lỗi Engine core crash trên Kaggle
+    env["NCCL_P2P_DISABLE"] = "1"          # Bắt buộc: 2x T4 trên Kaggle không có P2P NVLink
+    env["NCCL_IB_DISABLE"] = "1"           # Tắt InfiniBand
+    env["NCCL_NET_GDR_LEVEL"] = "0"
+    env["NCCL_DEBUG"] = "WARN"
+    env["TORCH_NCCL_AVOID_RECORD_STREAMS"] = "1"
+    
     vllm_cmd = [
         sys.executable, "-m", "vllm.entrypoints.openai.api_server",
         "--model", MODEL_NAME,
         "--served-model-name", SERVED_MODEL_NAME,
         "--port", "8000",
         "--tensor-parallel-size", str(tp_size),
-        "--gpu-memory-utilization", "0.90",
+        "--gpu-memory-utilization", "0.85",
         "--max-model-len", "8192",
         "--trust-remote-code",
-        "--dtype", "bfloat16" if torch.cuda.is_bf16_supported() else "float16",
+        "--dtype", "float16",              # T4 Compute Capability 7.5 không hỗ trợ bfloat16, bắt buộc dùng float16
         "--enforce-eager",
     ]
     
     with open("vllm_server.log", "w") as log_f:
-        p = subprocess.Popen(vllm_cmd, stdout=log_f, stderr=log_f)
+        p = subprocess.Popen(vllm_cmd, env=env, stdout=log_f, stderr=log_f)
     
     print("⏳ Đang tải weights Qwen 3.5 9B và khởi tạo vLLM (khoảng 60 - 90s)...")
     for sec in range(150):
@@ -212,8 +222,8 @@ if not server_ready:
             pass
 
 if not server_ready:
-    print("⚠️ Chưa thấy vLLM phản hồi, xem 30 dòng log cuối cùng:")
-    !tail -n 30 vllm_server.log
+    print("⚠️ Chưa thấy vLLM phản hồi. Toàn bộ log chi tiết từ vllm_server.log:")
+    !cat vllm_server.log
 else:
     # Test nhanh 1 request
     import requests
