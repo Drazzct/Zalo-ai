@@ -122,6 +122,24 @@ def solve(con):
     assert 'TimeoutError' in res['error']
     ingestor.close()
 
+  def test_auto_sanitize_uppercase_in_lower_like(self):
+    ingestor = DataIngestor(':memory:')
+    ingestor.con.execute(
+        "CREATE TABLE products (name VARCHAR, qty INT); "
+        "INSERT INTO products VALUES ('Ống PVC Bình Minh D50 cây 4m', 15), ('Sơn Maxilite 18L', 20);"
+    )
+    sandbox = ExecutionSandbox(timeout_sec=5.0)
+    # LLM wrote LOWER(name) LIKE '%D50%' with uppercase D, which would fail in DuckDB without auto-sanitizing
+    code = """
+def solve(con):
+    res = con.execute("SELECT SUM(qty) FROM products WHERE LOWER(name) LIKE '%D50%'").fetchone()[0]
+    return {"type": "number", "answer": int(res)}
+"""
+    res = sandbox.execute_code(code, ingestor.con)
+    assert res['success'] is True
+    assert res['result'] == {'type': 'number', 'answer': 15}
+    ingestor.close()
+
 
 class TestReasoningPipeline:
 

@@ -45,6 +45,11 @@ QUY TẮC BẮT BUỘC:
      `(LOWER(col) LIKE '%hủy%' OR LOWER(col) LIKE '%huỷ%' OR LOWER(col) LIKE '%da huy%' OR LOWER(col) LIKE '%huy don%' OR LOWER(col) LIKE '%cancel%')`
      Khi tính Doanh thu / Sản lượng bán, MẪU LỌC ĐƠN HỢP LỆ CHUẨN:
      `AND LOWER(col) NOT LIKE '%hủy%' AND LOWER(col) NOT LIKE '%huỷ%' AND LOWER(col) NOT LIKE '%cancel%' AND LOWER(col) NOT LIKE '%trả%' AND LOWER(col) NOT LIKE '%hoàn trả%' AND LOWER(col) NOT LIKE '%hoàn hàng%' AND (LOWER(col) NOT LIKE '%hoàn%' OR LOWER(col) LIKE '%hoàn thành%') AND LOWER(col) NOT LIKE '%không giao được%' AND LOWER(col) NOT LIKE '%that bai%' AND LOWER(col) NOT LIKE '%thất bại%'`
+   - ⚠️ CẢNH BÁO TỬ HUYỆT VỀ CHỮ HOA / CHỮ THƯỜNG TRONG LIKE:
+     Toán tử LIKE trong DuckDB PHÂN BIỆT chữ HOA/thường!
+     Khi dùng LOWER(col) để tìm kiếm, chuỗi mẫu tìm kiếm BẮT BUỘC phải viết thường 100%!
+     ❌ TUYỆT ĐỐI KHÔNG VIẾT: `LOWER(hang_ban) LIKE '%D50%'` hay `LIKE '%PVC%'` hay `LIKE '%LED%'` (Chữ 'D', 'PVC' hoa sẽ KHÔNG BAO GIỜ khớp với chuỗi đã LOWER, khiến kết quả luôn ra 0!)
+     ✅ BẮT BUỘC VIẾT: `LOWER(hang_ban) LIKE '%d50%'` hay `LIKE '%pvc%'` hay `LIKE '%led%'` (hoặc dùng `hang_ban ILIKE '%D50%'` để tìm kiếm không phân biệt hoa/thường).
    - Lọc Thuốc và Hoạt chất (Nhà thuốc):
       Hoạt chất trong database có thể là đơn chất (ví dụ: 'Natri clorid') hoặc đa chất phối hợp nối bằng ' + ' (ví dụ: 'Natri clorid + Kali clorid + Natri citrat + Glucose').
       Khi câu hỏi hỏi về một hoạt chất cụ thể (ví dụ: "Thuốc có hoạt chất Natri clorid"), BẮT BUỘC so sánh bằng chính xác:

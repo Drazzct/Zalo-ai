@@ -12,6 +12,8 @@ from typing import Any, Dict, Optional
 import duckdb
 
 
+import re
+
 class DuckDBContextWrapper:
   """Wrapper around DuckDBPyConnection to support both SQL execution and dictionary indexing for pandas."""
 
@@ -20,8 +22,34 @@ class DuckDBContextWrapper:
     self.as_of_date = as_of_date
     self._df_cache = {}
 
+  @staticmethod
+  def _sanitize_query(query: str) -> str:
+    """Sanitize SQL queries to protect against common LLM syntax and casing mistakes."""
+    if not isinstance(query, str):
+      return query
+
+    # Fix: LOWER(col) LIKE '%[A-Z]%' where pattern contains uppercase letters.
+    # DuckDB LIKE is case-sensitive, so LOWER(col) can never match uppercase characters.
+    def _lower_pattern(m):
+      prefix = m.group(1)
+      quote = m.group(2)
+      pattern = m.group(3)
+      return f'{prefix}{quote}{pattern.lower()}{quote}'
+
+    sanitized = re.sub(
+        r'(LOWER\s*\([^)]+\)\s+(?:NOT\s+)?LIKE\s+)([\'\"])(.*?)([\'\"])',
+        _lower_pattern,
+        query,
+        flags=re.IGNORECASE,
+    )
+    return sanitized
+
   def execute(self, query: str, *args, **kwargs):
-    return self._con.execute(query, *args, **kwargs)
+    sanitized_query = self._sanitize_query(query)
+    return self._con.execute(sanitized_query, *args, **kwargs)
+
+  def cursor(self):
+    return self
 
   def fetchall(self):
     return self._con.fetchall()
