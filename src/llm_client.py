@@ -142,18 +142,40 @@ class OpenAICompatibleClient(BaseLLMClient):
         },
     )
 
-    try:
-      with urllib.request.urlopen(req, timeout=self.timeout) as response:
-        res_data = json.loads(response.read().decode('utf-8'))
-        choice = res_data['choices'][0]['message']
-        content = choice.get('content', '')
-        # If reasoning content is present (DeepSeek-R1 / Qwen3.5-thinking style)
-        reasoning = choice.get('reasoning_content', '')
-        if reasoning and '<reasoning>' not in content:
-          return f'<reasoning>\n{reasoning.strip()}\n</reasoning>\n{content.strip()}'
-        return content
-    except Exception as e:
-      raise RuntimeError(f'OpenAI-compatible API generation error: {e}')
+    max_attempts = 2
+    for attempt in range(max_attempts):
+      try:
+        with urllib.request.urlopen(req, timeout=self.timeout) as response:
+          res_data = json.loads(response.read().decode('utf-8'))
+          choice = res_data['choices'][0]['message']
+          content = choice.get('content', '')
+          # If reasoning content is present (DeepSeek-R1 / Qwen3.5-thinking style)
+          reasoning = choice.get('reasoning_content', '')
+          if reasoning and '<reasoning>' not in content:
+            return f'<reasoning>\n{reasoning.strip()}\n</reasoning>\n{content.strip()}'
+          return content
+      except (TimeoutError, urllib.error.URLError) as e:
+        is_timeout = (
+            isinstance(e, TimeoutError)
+            or 'timed out' in str(e).lower()
+            or 'timeout' in str(e).lower()
+        )
+        if is_timeout:
+          raise TimeoutError(
+              f'OpenAI-compatible request timed out after {self.timeout}s: {e}'
+          )
+        if attempt < max_attempts - 1:
+          time.sleep(2)
+          continue
+        raise ConnectionError(
+            f'Could not connect to OpenAI-compatible server at {self.base_url}.'
+            f' Make sure vLLM is running: {e}'
+        )
+      except Exception as e:
+        if attempt < max_attempts - 1:
+          time.sleep(2)
+          continue
+        raise RuntimeError(f'OpenAI-compatible API generation error: {e}')
 
 
 class VLLMDirectClient(BaseLLMClient):

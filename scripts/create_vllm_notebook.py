@@ -119,7 +119,8 @@ else:
         print("👉 CÁCH BẬT GPU TRÊN COLAB:")
         print("   1. Vào menu 'Runtime' -> 'Change runtime type'.")
         print("   2. Tại mục 'Hardware accelerator', chọn 'T4 GPU'.")
-        print("   3. Bấm 'Save' để kích hoạt GPU!")""")
+        print("   3. Bấm 'Save' để kích hoạt GPU!")
+    raise RuntimeError("❌ DỪNG LẠI: Chưa bật GPU! vLLM không thể chạy trên CPU. Hãy bật GPU theo hướng dẫn trên rồi chạy lại!")""")
   )
 
   # Cell 3: Clone or Pull Codebase
@@ -169,21 +170,36 @@ Khởi chạy tiến trình `vllm.entrypoints.openai.api_server` ở nền:
 - **Reasoning**: Hỗ trợ suy luận logic qua thẻ `<reasoning>` trước khi sinh mã Python.
 - **Tensor Parallelism**: Tự động đặt `tp=2` nếu phát hiện 2 GPU trên Kaggle (chia tải ~9GB VRAM/card).
 - **Port**: 8000 (`http://127.0.0.1:8000/v1`).
-- **Max Model Len**: 8192 tokens.
+- **Max Model Len**: 4096 tokens (tiết kiệm VRAM cho 4 workers gom batch).
 - **Enforce Eager**: Tối ưu hóa thời gian khởi động trên kiến trúc GPU T4.""")
   )
   nb['cells'].append(
       code("""import subprocess, os, sys, time, urllib.request, json
-import torch
+import torch, shutil
 
-# Model Qwen 3.5 9B Reasoning từ HuggingFace
+# 1. Kiểm tra phần cứng GPU
+if not torch.cuda.is_available() or not shutil.which("nvidia-smi"):
+    raise RuntimeError(
+        "❌ KHÔNG TÌM THẤY GPU!\\n"
+        "vLLM bắt buộc phải có GPU để chạy.\\n"
+        "👉 Cách sửa trên Kaggle:\\n"
+        "   1. Nhìn sang thanh menu bên phải (Session options).\\n"
+        "   2. Tại mục 'Accelerator', chọn 'GPU T4 x 2'.\\n"
+        "   3. Chờ session khởi động lại rồi chạy lại từ đầu!"
+    )
+
+# Model Qwen 3.5 9B Reasoning từ HuggingFace (Mặc định)
+# Lưu ý: Qwen/Qwen3.5-9B nặng ~18GB, tải mất 3-5 phút trên Kaggle.
+# Bạn cũng có thể dùng 'Qwen/Qwen2.5-Coder-7B-Instruct' nếu muốn nạp siêu nhanh (~14GB).
 MODEL_NAME = "Qwen/Qwen3.5-9B"
 SERVED_MODEL_NAME = "qwen3.5:9b"
 
 # Phát hiện số GPU khả dụng cho Tensor Parallelism (2x T4 trên Kaggle)
-num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 1
+num_gpus = torch.cuda.device_count()
 tp_size = 2 if num_gpus >= 2 else 1
 print(f"🎮 Số GPU phát hiện: {num_gpus} | Tensor Parallel Size cấu hình: {tp_size}")
+if num_gpus < 2:
+    print("⚠️ Chú ý: Bạn đang chỉ có 1 GPU. Để chạy mượt mà Qwen 3.5 9B (18GB), hãy chọn 'GPU T4 x 2' trên Kaggle!")
 
 vllm_api_url = "http://127.0.0.1:8000/v1/models"
 server_ready = False
@@ -192,12 +208,14 @@ try:
     with urllib.request.urlopen(vllm_api_url, timeout=2) as r:
         if r.status == 200:
             server_ready = True
-            print("✅ vLLM Server đã chạy sẵn từ trước!")
+            print("✅ vLLM Server đã chạy sẵn từ trước và sẵn sàng phục vụ!")
 except Exception:
     pass
 
 if not server_ready:
     print(f"🚀 Đang khởi động vLLM Server với model {MODEL_NAME} (alias: {SERVED_MODEL_NAME})...")
+    print(f"📦 vLLM sẽ tự động tải weights {MODEL_NAME} từ HuggingFace (~18GB) và nạp vào {num_gpus} GPU...")
+    print("⏳ Tiến trình có thể mất từ 3 - 6 phút ở lần đầu tiên. Đang theo dõi tiến độ log...")
     
     # Cấu hình biến môi trường tối ưu cho 2x T4 trên Kaggle
     env = os.environ.copy()
@@ -207,6 +225,7 @@ if not server_ready:
     env["NCCL_NET_GDR_LEVEL"] = "0"
     env["NCCL_DEBUG"] = "WARN"
     env["TORCH_NCCL_AVOID_RECORD_STREAMS"] = "1"
+    env["PYTHONUNBUFFERED"] = "1"
     
     vllm_cmd = [
         sys.executable, "-m", "vllm.entrypoints.openai.api_server",
@@ -215,43 +234,76 @@ if not server_ready:
         "--port", "8000",
         "--tensor-parallel-size", str(tp_size),
         "--gpu-memory-utilization", "0.85",
-        "--max-model-len", "8192",
+        "--max-model-len", "4096",
         "--trust-remote-code",
         "--dtype", "float16",              # T4 Compute Capability 7.5 không hỗ trợ bfloat16, bắt buộc dùng float16
         "--enforce-eager",
     ]
     
-    with open("vllm_server.log", "w") as log_f:
-        p = subprocess.Popen(vllm_cmd, env=env, stdout=log_f, stderr=log_f)
+    log_file_path = "vllm_server.log"
+    log_f = open(log_file_path, "w", encoding="utf-8")
+    p = subprocess.Popen(vllm_cmd, env=env, stdout=log_f, stderr=log_f)
     
-    print("⏳ Đang tải weights Qwen 3.5 9B và khởi tạo vLLM (khoảng 60 - 90s)...")
-    for sec in range(150):
-        time.sleep(2)
+    start_time = time.time()
+    max_wait_seconds = 600  # 10 phút tối đa để tải 18GB
+    last_reported = 0
+    
+    while time.time() - start_time < max_wait_seconds:
+        time.sleep(3)
+        elapsed = int(time.time() - start_time)
+        
+        # 1. Phát hiện crash sớm: nếu process đã thoát, dừng ngay và in log lỗi
+        exit_code = p.poll()
+        if exit_code is not None:
+            log_f.close()
+            with open(log_file_path, "r", encoding="utf-8", errors="replace") as rf:
+                err_logs = rf.read()
+            raise RuntimeError(
+                f"❌ vLLM Server bị dừng đột ngột (Exit code: {exit_code})!\\n"
+                f"--- CHI TIẾT LỖI TỪ vllm_server.log ---\\n{err_logs}"
+            )
+        
+        # 2. Kiểm tra endpoint đã phản hồi 200 OK chưa
         try:
             with urllib.request.urlopen(vllm_api_url, timeout=2) as r:
                 if r.status == 200:
                     server_ready = True
-                    print(f"✅ vLLM Server Qwen 3.5 9B đã sẵn sàng phục vụ tại http://127.0.0.1:8000/v1 (sau {sec*2}s)!")
+                    print(f"\\n🎉 THÀNH CÔNG: vLLM Server Qwen 3.5 9B đã sẵn sàng tại http://127.0.0.1:8000/v1 (sau {elapsed}s)!")
                     break
         except Exception:
             pass
+        
+        # 3. Đọc dòng log mới nhất để báo tiến độ tải file
+        if elapsed - last_reported >= 15:
+            last_reported = elapsed
+            try:
+                with open(log_file_path, "r", encoding="utf-8", errors="replace") as rf:
+                    lines = [l.strip() for l in rf.readlines() if l.strip()]
+                    last_line = lines[-1] if lines else "Đang khởi tạo..."
+                    print(f"   [{elapsed}s] {last_line[:120]}")
+            except Exception:
+                print(f"   [{elapsed}s] Đang tải mô hình...")
 
 if not server_ready:
-    print("⚠️ Chưa thấy vLLM phản hồi. Toàn bộ log chi tiết từ vllm_server.log:")
-    !cat vllm_server.log
-else:
-    # Test nhanh 1 request
-    import requests
-    res = requests.post(
-        "http://127.0.0.1:8000/v1/chat/completions",
-        json={
-            "model": SERVED_MODEL_NAME,
-            "messages": [{"role": "user", "content": "print('Qwen 3.5 9B is ready')"}],
-            "max_tokens": 30
-        },
-        timeout=10
+    with open(log_file_path, "r", encoding="utf-8", errors="replace") as rf:
+        err_logs = rf.read()
+    raise RuntimeError(
+        f"❌ vLLM Server không phản hồi sau {max_wait_seconds}s!\\n"
+        f"--- CHI TIẾT LOG ---\\n{err_logs}"
     )
-    print("💬 Kiểm tra phản hồi mẫu từ vLLM:", res.json()["choices"][0]["message"]["content"])""")
+
+# 4. Gửi test request kiểm tra phản hồi
+import requests
+res = requests.post(
+    "http://127.0.0.1:8000/v1/chat/completions",
+    json={
+        "model": SERVED_MODEL_NAME,
+        "messages": [{"role": "user", "content": "print('Qwen 3.5 9B is ready')"}],
+        "max_tokens": 30
+    },
+    timeout=30
+)
+print("💬 Phản hồi test từ vLLM:", res.json()["choices"][0]["message"]["content"])""")
   )
 
   # Cell 6: Unit Tests
