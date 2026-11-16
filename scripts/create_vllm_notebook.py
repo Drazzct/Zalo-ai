@@ -104,7 +104,22 @@ except Exception:
         print("⚠️ CẢNH BÁO: Không có kết nối Internet.")
 
 # 4. Kiểm tra GPU
-!nvidia-smi""")
+import shutil
+
+if shutil.which("nvidia-smi"):
+    !nvidia-smi
+else:
+    print("❌ CẢNH BÁO: KHÔNG TÌM THẤY GPU (Đang chạy ở chế độ CPU Only)!")
+    if ENV == "kaggle":
+        print("👉 CÁCH BẬT GPU TRÊN KAGGLE:")
+        print("   1. Nhìn sang thanh công cụ bên phải màn hình (Session options).")
+        print("   2. Tại mục 'Accelerator', bấm vào và chọn 'GPU T4 x 2'.")
+        print("   3. Xác nhận khởi động lại session để kích hoạt GPU!")
+    elif ENV == "colab":
+        print("👉 CÁCH BẬT GPU TRÊN COLAB:")
+        print("   1. Vào menu 'Runtime' -> 'Change runtime type'.")
+        print("   2. Tại mục 'Hardware accelerator', chọn 'T4 GPU'.")
+        print("   3. Bấm 'Save' để kích hoạt GPU!")""")
   )
 
   # Cell 3: Clone or Pull Codebase
