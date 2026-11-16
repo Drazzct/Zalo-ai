@@ -37,20 +37,21 @@ def build_vllm_notebook():
 
   # Cell 1: Header
   nb['cells'].append(
-      md("""# 🚀 Zalo AI Challenge 2026: DataMate - vLLM High-Throughput Ultra-Fast Runner
-*(Tối ưu hóa tốc độ suy luận bằng **vLLM (PagedAttention & Continuous Batching)** trên **Kaggle (2x T4 / P100)** và **Google Colab (T4 / A100)**)*
+      md("""# 🚀 Zalo AI Challenge 2026: DataMate - Qwen 3.5 9B Reasoning with vLLM Ultra-Fast Runner
+*(Tối ưu hóa tốc độ suy luận mô hình **Qwen 3.5 9B (Reasoning)** bằng **vLLM (PagedAttention & Continuous Batching)** trên **Kaggle (2x T4 / P100)** và **Google Colab (T4 / A100)**)*
 
-### 🌟 Ưu điểm vượt trội của bản vLLM:
-1. **Tốc độ thông lượng gấp 3 - 5 lần**: vLLM quản lý KV-cache thông qua PagedAttention và gom batch liên tục (continuous batching), cho phép chạy **4 luồng song song** mà không làm tăng đáng kể độ trễ.
-2. **Hỗ trợ Tensor Parallelism (TP=2) trên Kaggle**: Tự động tận dụng cùng lúc cả 2 card GPU T4 trên Kaggle để chia tải mô hình, tối ưu hoá VRAM và tốc độ sinh token.
-3. **Cơ chế Fast-Retry & Chống nghẽn Timeout**: Tự động bắt timeout (90s) và retry tức thì không qua reasoning, đảm bảo không bị kẹt ở các câu tính toán phức tạp.
-4. **Schema Trimming & Strict Reasoning**: Rút gọn schema context hơn 70%, kiềm chế reasoning dưới 40 từ giúp ngăn chặn 100% hiện tượng tràn context / truncation.
-5. **Auto-Resume & Lưu Google Drive**: Bảo toàn tiến độ làm bài khi mất kết nối mạng hoặc hết phiên Colab.
+### 🌟 Ưu điểm vượt trội của bản vLLM Qwen 3.5 9B:
+1. **Mô hình Qwen 3.5 9B Reasoning**: Sử dụng kiến trúc suy luận thế hệ mới `Qwen/Qwen3.5-9B`, hỗ trợ suy luận logic qua thẻ `<reasoning>` trước khi sinh mã Python.
+2. **Tốc độ thông lượng gấp 3 - 5 lần**: vLLM quản lý KV-cache thông qua PagedAttention và gom batch liên tục (continuous batching), cho phép chạy **4 luồng song song** mà không làm tăng đáng kể độ trễ.
+3. **Hỗ trợ Tensor Parallelism (TP=2) trên Kaggle**: Tự động tận dụng cùng lúc cả 2 card GPU T4 trên Kaggle (`tp=2`) để chia tải mô hình 9B (mỗi card ~9GB VRAM), tối ưu hoá tốc độ sinh token và chống tràn VRAM.
+4. **Cơ chế Fast-Retry & Chống nghẽn Timeout**: Tự động bắt timeout (90s) và retry tức thì không qua reasoning, đảm bảo không bị kẹt ở các câu tính toán phức tạp.
+5. **Schema Trimming & Strict Reasoning**: Rút gọn schema context hơn 70%, kiềm chế reasoning dưới 40 từ giúp ngăn chặn 100% hiện tượng tràn context / truncation.
+6. **Auto-Resume & Lưu Google Drive**: Bảo toàn tiến độ làm bài khi mất kết nối mạng hoặc hết phiên Colab.
 
 ---
 ### ⚙️ HƯỚNG DẪN CẤU HÌNH PHẦN CỨNG:
 - **Trên Kaggle Notebooks:** Ở thanh menu bên phải:
-  - **Accelerator:** Chọn **GPU T4 x 2** (để kích hoạt Tensor Parallelism 2 card) hoặc **GPU P100**.
+  - **Accelerator:** BẮT BUỘC chọn **GPU T4 x 2** (để kích hoạt Tensor Parallelism 2 card chia tải mô hình 9B) hoặc **GPU P100**.
   - **Internet:** BẮT BUỘC gạt sang **"Internet on"** (để tải thư viện và mô hình từ HuggingFace).
 - **Trên Google Colab:** Vào menu **Runtime -> Change runtime type -> Hardware accelerator: T4 GPU** (hoặc A100).""")
   )
@@ -147,22 +148,24 @@ Cài đặt vLLM cùng DuckDB, OpenPyXL, Pandas và các phụ thuộc phục v�
 
   # Cell 5: Setup & Launch vLLM OpenAI-Compatible Server
   nb['cells'].append(
-      md("""## 4. Khởi động vLLM Server (OpenAI-Compatible Engine)
+      md("""## 4. Khởi động vLLM Server (Qwen 3.5 9B Reasoning Engine)
 Khởi chạy tiến trình `vllm.entrypoints.openai.api_server` ở nền:
-- **Model mặc định**: `Qwen/Qwen2.5-Coder-7B-Instruct` (hoặc `Qwen/Qwen2.5-7B-Instruct` / `deepseek-ai/DeepSeek-R1-Distill-Qwen-8B`).
-- **Tensor Parallelism**: Tự động đặt `tp=2` nếu phát hiện 2 GPU trên Kaggle.
+- **Mô hình**: `Qwen/Qwen3.5-9B` (đăng ký alias `qwen3.5:9b` tương thích pipeline).
+- **Reasoning**: Hỗ trợ suy luận logic qua thẻ `<reasoning>` trước khi sinh mã Python.
+- **Tensor Parallelism**: Tự động đặt `tp=2` nếu phát hiện 2 GPU trên Kaggle (chia tải ~9GB VRAM/card).
 - **Port**: 8000 (`http://127.0.0.1:8000/v1`).
 - **Max Model Len**: 8192 tokens.
-- **Enforce Eager**: Giảm thiểu thời gian nạp ban đầu trên kiến trúc GPU T4.""")
+- **Enforce Eager**: Tối ưu hóa thời gian khởi động trên kiến trúc GPU T4.""")
   )
   nb['cells'].append(
       code("""import subprocess, os, sys, time, urllib.request, json
 import torch
 
-# Chọn model HuggingFace phù hợp cho code/reasoning
-MODEL_NAME = "Qwen/Qwen2.5-Coder-7B-Instruct"
+# Model Qwen 3.5 9B Reasoning từ HuggingFace
+MODEL_NAME = "Qwen/Qwen3.5-9B"
+SERVED_MODEL_NAME = "qwen3.5:9b"
 
-# Phát hiện số GPU khả dụng cho Tensor Parallelism
+# Phát hiện số GPU khả dụng cho Tensor Parallelism (2x T4 trên Kaggle)
 num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 1
 tp_size = 2 if num_gpus >= 2 else 1
 print(f"🎮 Số GPU phát hiện: {num_gpus} | Tensor Parallel Size cấu hình: {tp_size}")
@@ -179,30 +182,31 @@ except Exception:
     pass
 
 if not server_ready:
-    print(f"🚀 Đang khởi động vLLM OpenAI-compatible Server với model {MODEL_NAME}...")
+    print(f"🚀 Đang khởi động vLLM Server với model {MODEL_NAME} (alias: {SERVED_MODEL_NAME})...")
     vllm_cmd = [
         sys.executable, "-m", "vllm.entrypoints.openai.api_server",
         "--model", MODEL_NAME,
+        "--served-model-name", SERVED_MODEL_NAME,
         "--port", "8000",
         "--tensor-parallel-size", str(tp_size),
         "--gpu-memory-utilization", "0.90",
         "--max-model-len", "8192",
         "--trust-remote-code",
-        "--dtype", "auto",
+        "--dtype", "bfloat16" if torch.cuda.is_bf16_supported() else "float16",
         "--enforce-eager",
     ]
     
     with open("vllm_server.log", "w") as log_f:
         p = subprocess.Popen(vllm_cmd, stdout=log_f, stderr=log_f)
     
-    print("⏳ Đang tải weights và khởi tạo PagedAttention (khoảng 60 - 90s)...")
-    for sec in range(120):
+    print("⏳ Đang tải weights Qwen 3.5 9B và khởi tạo vLLM (khoảng 60 - 90s)...")
+    for sec in range(150):
         time.sleep(2)
         try:
             with urllib.request.urlopen(vllm_api_url, timeout=2) as r:
                 if r.status == 200:
                     server_ready = True
-                    print(f"✅ vLLM Server đã sẵn sàng phục vụ tại http://127.0.0.1:8000/v1 (sau {sec*2}s)!")
+                    print(f"✅ vLLM Server Qwen 3.5 9B đã sẵn sàng phục vụ tại http://127.0.0.1:8000/v1 (sau {sec*2}s)!")
                     break
         except Exception:
             pass
@@ -216,8 +220,8 @@ else:
     res = requests.post(
         "http://127.0.0.1:8000/v1/chat/completions",
         json={
-            "model": MODEL_NAME,
-            "messages": [{"role": "user", "content": "print('vLLM is ready')"}],
+            "model": SERVED_MODEL_NAME,
+            "messages": [{"role": "user", "content": "print('Qwen 3.5 9B is ready')"}],
             "max_tokens": 30
         },
         timeout=10
@@ -228,7 +232,7 @@ else:
   # Cell 6: Unit Tests
   nb['cells'].append(
       md("""## 5. Chạy Toàn Bộ Unit Tests
-Đảm bảo toàn bộ 37 bài kiểm thử nghiệp vụ, calendar, sandbox, data ingestion, và abstain gate đều PASS 100%.""")
+Đảm bảo toàn bộ 38 bài kiểm thử nghiệp vụ, calendar, sandbox, data ingestion, và abstain gate đều PASS 100%.""")
   )
   nb['cells'].append(
       code("""!pytest tests/ -q""")
@@ -248,7 +252,7 @@ from IPython.display import display, Markdown
 
 # Khởi tạo Pipeline kết nối với vLLM API
 llm = OpenAICompatibleClient(
-    model_name=MODEL_NAME,
+    model_name=SERVED_MODEL_NAME,
     base_url="http://127.0.0.1:8000/v1",
     timeout=90.0
 )
@@ -314,10 +318,10 @@ LOGS_DIR = os.path.join(OUTPUT_DIR, "logs")
 os.makedirs(LOGS_DIR, exist_ok=True)
 
 print("=" * 60)
-print("🚀 BẮT ĐẦU CHẠY SUY LUẬN 1,000 CÂU PUBLIC TEST VỚI vLLM")
+print("🚀 BẮT ĐẦU CHẠY SUY LUẬN 1,000 CÂU PUBLIC TEST VỚI vLLM (QWEN 3.5 9B)")
 print(f"- Output Submission: {SUBMISSION_FILE}")
 print(f"- Logs Directory   : {LOGS_DIR}")
-print(f"- Backend / Model  : vllm ({MODEL_NAME})")
+print(f"- Backend / Model  : vllm ({MODEL_NAME} -> {SERVED_MODEL_NAME})")
 print(f"- Workers          : 4 luồng song song (vLLM PagedAttention Batching)")
 print(f"- Resume Mode      : BẬT")
 print("=" * 60)
@@ -328,7 +332,7 @@ print("=" * 60)
   --output {SUBMISSION_FILE} \\
   --log-dir {LOGS_DIR} \\
   --model-backend vllm \\
-  --model-name {MODEL_NAME} \\
+  --model-name {SERVED_MODEL_NAME} \\
   --api-url http://127.0.0.1:8000/v1 \\
   --workers 4 \\
   --resume""")
