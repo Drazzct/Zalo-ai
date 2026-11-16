@@ -158,7 +158,7 @@ print("✅ Thư mục làm việc hiện tại:", os.getcwd())
 Cài đặt vLLM cùng DuckDB, OpenPyXL, Pandas và các phụ thuộc phục vụ suy luận dữ liệu.""")
   )
   nb['cells'].append(
-      code("""!pip install -q vllm pandas duckdb openpyxl pydantic pytest requests openai tabulate""")
+      code("""!pip install -q --no-warn-conflicts vllm pandas duckdb openpyxl pydantic pytest requests openai tabulate""")
   )
 
   # Cell 5: Setup & Launch vLLM OpenAI-Compatible Server

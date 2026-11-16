@@ -163,8 +163,8 @@ print("✅ Thư mục làm việc hiện tại:", os.getcwd())
   nb['cells'].append(md('## 3. Cài đặt các thư viện Python'))
   nb['cells'].append(
       code(
-          '!pip install -q pandas duckdb openpyxl pydantic pytest requests'
-          ' openai tabulate'
+          '!pip install -q --no-warn-conflicts pandas duckdb openpyxl pydantic'
+          ' pytest requests openai tabulate'
       )
   )
 
