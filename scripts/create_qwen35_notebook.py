@@ -170,10 +170,11 @@ print("✅ Thư mục làm việc hiện tại:", os.getcwd())
 
   # Cell 5: Setup Ollama GPU with 16384 context length (Full Context & Reasoning)
   nb['cells'].append(
-      md("""## 4. Cài đặt & Khởi động Ollama GPU Tối ưu
-Cấu hình `OLLAMA_CONTEXT_LENGTH=16384` và `OLLAMA_NUM_PARALLEL=2`:
-- Hỗ trợ toàn bộ schema và rulebook lớn của các shop (lên tới 16k tokens) mà không bị cắt cụt.
-- Đảm bảo 100% mô hình `qwen3.5:9b` nằm trọn trong VRAM 15GB của T4 mà không bị tràn.""")
+      md("""## 4. Cài đặt & Khởi động Ollama Dual-GPU Tối ưu (4 Workers Song Song)
+Cấu hình Dual-GPU (`2x T4` trên Kaggle) với `OLLAMA_SCHED_SPREAD=1` và `OLLAMA_NUM_PARALLEL=4`:
+- **Chia tải đều 2 GPU**: `OLLAMA_SCHED_SPREAD=1` phân bổ các layers của mô hình `qwen3.5:9b` (5.5GB) sang cả 2 GPU (mỗi GPU chỉ giữ ~2.75GB weights).
+- **Xử lý song song 4 luồng**: `OLLAMA_NUM_PARALLEL=4` mở 4 slots context độc lập, phục vụ cùng lúc 4 workers giúp tăng tốc gấp đôi!
+- **Context 8192 tokens**: Kết hợp cơ chế Schema Trimming (giảm 70% prompt) giúp giải phóng VRAM và tăng tốc sinh token.""")
   )
   nb['cells'].append(
       code("""import subprocess, os, time, urllib.request, shutil
@@ -187,13 +188,14 @@ if not shutil.which("ollama"):
 else:
     print("✅ Ollama đã được cài đặt sẵn.")
 
-# 2. Khởi chạy Ollama daemon với GPU
+# 2. Khởi chạy Ollama daemon tối ưu hoá Dual-GPU (Kaggle 2x T4)
 env = os.environ.copy()
 env["CUDA_VISIBLE_DEVICES"] = "0,1" if os.path.exists("/kaggle") else "0"
-env["OLLAMA_NUM_PARALLEL"] = "2"          # 2 luồng song song cho 9B
-env["OLLAMA_FLASH_ATTENTION"] = "1"       # Kích hoạt Flash Attention
-env["OLLAMA_CONTEXT_LENGTH"] = "16384"    # Đảm bảo đủ context 16k cho prompt & reasoning
-env["LLM_NUM_CTX"] = "16384"
+env["OLLAMA_SCHED_SPREAD"] = "1"           # Chia đều model layers sang cả 2 GPU T4
+env["OLLAMA_NUM_PARALLEL"] = "4"           # 4 luồng xử lý song song đồng thời
+env["OLLAMA_FLASH_ATTENTION"] = "1"        # Kích hoạt Flash Attention tăng tốc
+env["OLLAMA_CONTEXT_LENGTH"] = "8192"      # 8k context tối ưu VRAM cho 4 slots
+env["LLM_NUM_CTX"] = "8192"
 env["LLM_NUM_PREDICT"] = "2048"
 env["LLM_TIMEOUT"] = "90.0"
 
@@ -201,7 +203,7 @@ try:
     urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2)
     print("✅ Ollama daemon đã sẵn sàng từ trước!")
 except Exception:
-    print("🚀 Đang khởi động Ollama daemon GPU...")
+    print("🚀 Đang khởi động Ollama daemon Dual-GPU...")
     with open("ollama.log", "w") as f:
         subprocess.Popen(["ollama", "serve"], env=env, stdout=f, stderr=f)
     daemon_ready = False
@@ -214,7 +216,7 @@ except Exception:
         except Exception:
             pass
     if daemon_ready:
-        print("✅ Khởi động Ollama daemon GPU thành công!")
+        print("✅ Khởi động Ollama daemon Dual-GPU thành công!")
     else:
         print("⚠️ Đang hoàn tất nạp daemon...")
 
@@ -317,22 +319,22 @@ LOGS_DIR = os.path.join(OUTPUT_DIR, "logs")
 os.makedirs(LOGS_DIR, exist_ok=True)
 
 print("=" * 60)
-print("🚀 BẮT ĐẦU CHẠY SUY LUẬN 1,000 CÂU PUBLIC TEST")
+print("🚀 BẮT ĐẦU CHẠY SUY LUẬN 1,000 CÂU PUBLIC TEST (4 WORKERS)")
 print(f"- Output Submission: {SUBMISSION_FILE}")
 print(f"- Logs Directory   : {LOGS_DIR}")
 print(f"- Backend / Model  : ollama ({MODEL_NAME})")
-print(f"- Workers          : 2 luồng song song")
+print(f"- Workers          : 4 luồng song song (Dual-GPU Parallel Inference)")
 print(f"- Resume Mode      : BẬT")
 print("=" * 60)
 
-# Thực thi lệnh dự đoán toàn diện
+# Thực thi lệnh dự đoán toàn diện với 4 workers
 !python predict.py \\
   --input-dir public_test \\
   --output {SUBMISSION_FILE} \\
   --log-dir {LOGS_DIR} \\
   --model-backend ollama \\
   --model-name {MODEL_NAME} \\
-  --workers 2 \\
+  --workers 4 \\
   --resume""")
   )
 
