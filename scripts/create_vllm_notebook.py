@@ -217,10 +217,18 @@ if not server_ready:
     print(f"📦 vLLM sẽ tự động tải weights {MODEL_NAME} từ HuggingFace (~18GB) và nạp vào {num_gpus} GPU...")
     print("⏳ Tiến trình có thể mất từ 3 - 6 phút ở lần đầu tiên. Đang theo dõi tiến độ log...")
     
+    # 0. Dọn dẹp tiến trình vLLM cũ nếu bị treo từ lần chạy trước
+    try:
+        subprocess.run(["pkill", "-9", "-f", "vllm"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(1)
+    except Exception:
+        pass
+
     # Cấu hình biến môi trường tối ưu cho 2x T4 trên Kaggle
     env = os.environ.copy()
     env["VLLM_USE_V1"] = "0"               # Bắt buộc: Tắt V1 engine để tránh lỗi Engine core crash trên Kaggle
     env["NCCL_P2P_DISABLE"] = "1"          # Bắt buộc: 2x T4 trên Kaggle không có P2P NVLink
+    env["VLLM_SKIP_P2P_CHECK"] = "1"        # Bỏ qua kiểm tra P2P để chống treo IPC
     env["NCCL_IB_DISABLE"] = "1"           # Tắt InfiniBand
     env["NCCL_NET_GDR_LEVEL"] = "0"
     env["NCCL_DEBUG"] = "WARN"
@@ -238,6 +246,8 @@ if not server_ready:
         "--trust-remote-code",
         "--dtype", "float16",              # T4 Compute Capability 7.5 không hỗ trợ bfloat16, bắt buộc dùng float16
         "--enforce-eager",
+        "--disable-custom-all-reduce",       # BẮT BUỘC KAGGLE: Chống deadlock shm_broadcast trên dual T4 PCIe
+        "--limit-mm-per-prompt", '{"image": 0, "video": 0}',  # Tắt cache ảnh/video vì chỉ suy luận dữ liệu text/SQL
     ]
     
     log_file_path = "vllm_server.log"
